@@ -22,12 +22,6 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: true,
     },
-
-    googleSub: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true,
-    },
     
     role: {
         type: DataTypes.STRING,

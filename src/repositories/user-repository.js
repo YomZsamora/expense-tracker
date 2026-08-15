@@ -34,23 +34,6 @@ const findUserById = async (id) => {
     });
 };
 
-/** * Finds a user by their Google sub or creates a new user if not found.
- * @param {Object} params - The parameters for finding or creating the user.
- * @param {string} params.googleSub - The Google sub of the user.
- * @param {string} params.email - The email address of the user.
- * @returns {Promise<Object>} - The found or created user object.
- */
-const findOrCreateGoogleUser = async ({ googleSub, email }) => {
-    let user = await User.findOne({ where: { googleSub } });
-    if (user) return user;
-    user = await User.findOne({ where: { email: email.trim().toLowerCase() } });
-    if (user) {
-        await user.update({ googleSub });
-        return user;
-    }
-    return User.create({ googleSub, email, role: 'USER' });
-};
-
 const userEmailExists = async (email) => {
     const user = await User.findOne({
         where: { email: email.trim().toLowerCase() },
@@ -70,7 +53,6 @@ module.exports = {
     registerUser,
     findUserByEmail,
     findUserById,
-    findOrCreateGoogleUser,
     userEmailExists,
     findUsersByIds,
 };
