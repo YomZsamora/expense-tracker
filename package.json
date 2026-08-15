@@ -1,11 +1,12 @@
 {
-  "name": "authentication-service",
+  "name": "expense-tracker",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "migrate": "npx sequelize-cli db:migrate",
     "test": "jest"
   },
   "keywords": [],
