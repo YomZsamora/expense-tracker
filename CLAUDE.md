@@ -1,4 +1,4 @@
-# AGENTS.md — authentication-service
+# AGENTS.md — expense-tracker
 
 This file provides guidance for AI coding agents (e.g. GitHub Copilot, Claude, Codex) working on
 Node.js and Express.js backend services. The conventions defined here are intended to be consistent
