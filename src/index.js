@@ -6,7 +6,6 @@ const authRoutes = require('./app/routes/auth-routes');
 const { exceptionHandler } = require('./utils/exceptions/exception-handler');
 
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
