@@ -13,7 +13,7 @@ const setRefreshCookie = (res, token) => {
         httpOnly: true,
         secure: true,
         sameSite: 'strict',
-        path: '/v1/auth/refresh-token',
+        path: '/v1/auth/refresh',
         maxAge: REFRESH_TOKEN_TTL * 1000,
     });
 };
@@ -23,7 +23,7 @@ const clearRefreshCookie = (res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'strict',
-        path: '/v1/auth/refresh-token',
+        path: '/v1/auth/refresh',
     });
 };
 

@@ -13,9 +13,9 @@ const {
 
 const router = express.Router();
 
-router.post('/basic-registration', basicRegistrationMiddleware, basicRegistrationController);
-router.post('/basic-login', basicLoginMiddleware, basicLoginController);
-router.post('/refresh-token', refreshTokenMiddleware, refreshTokenController);
+router.post('/register', basicRegistrationMiddleware, basicRegistrationController);
+router.post('/login', basicLoginMiddleware, basicLoginController);
+router.post('/refresh', refreshTokenMiddleware, refreshTokenController);
 router.post('/logout', logoutController);
 
 module.exports = router;
