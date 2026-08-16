@@ -1,21 +1,21 @@
 const { validationResult } = require('express-validator');
 const { ApiResponse, ERROR_STATUS } = require('../responses');
-const { 
-    BadRequest, 
-    NotFound, 
+const {
+    BadRequest,
+    NotFound,
+    Conflict,
     NotAuthenticated,
     PermissionDenied,
     UnprocessedEntity,
     TokenExpired,
     InvalidJsonWebToken,
-    TokenReuseDetected
+    TokenReuseDetected,
 } = require('./custom-exceptions');
 
-const exceptionHandler = (err, req, res, next) => {
-    
+const exceptionHandler = (err, req, res, _next) => {
     const apiResponse = new ApiResponse();
     apiResponse.status = ERROR_STATUS;
-    apiResponse.message = err.message || "Internal Server Error";
+    apiResponse.message = err.message || 'Internal Server Error';
     apiResponse.data = err.errors || {};
     let statusCode = err.statusCode || 500;
 
@@ -26,6 +26,11 @@ const exceptionHandler = (err, req, res, next) => {
     }
 
     if (err instanceof NotFound) {
+        statusCode = err.statusCode;
+        apiResponse.message = err.message;
+    }
+
+    if (err instanceof Conflict) {
         statusCode = err.statusCode;
         apiResponse.message = err.message;
     }
@@ -61,24 +66,19 @@ const exceptionHandler = (err, req, res, next) => {
     }
 
     return res.status(statusCode).json(apiResponse);
-}
+};
 
 const formatExceptions = (errors) => {
     return Object.fromEntries(
-        Object.entries(errors.mapped()).map(([field, error]) => [
-            field,
-            error.msg
-        ])
+        Object.entries(errors.mapped()).map(([field, error]) => [field, error.msg])
     );
 };
 
 const formatLoggerExceptions = (errors) => {
-    return errors && typeof errors === 'object' 
-            ? Object.values(errors).join(', ') 
-            : errors;
-}
+    return errors && typeof errors === 'object' ? Object.values(errors).join(', ') : errors;
+};
 
-const handleBadRequests = (errorMessage = "Validation failed.") => {
+const handleBadRequests = (errorMessage = 'Validation failed.') => {
     return (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -88,7 +88,7 @@ const handleBadRequests = (errorMessage = "Validation failed.") => {
     };
 };
 
-const handleNotFoundErrors = (errorMessage = "Resource not found.") => {
+const handleNotFoundErrors = (errorMessage = 'Resource not found.') => {
     return (req, res, next) => {
         const resource = req.resource;
         if (!resource) {
@@ -98,10 +98,10 @@ const handleNotFoundErrors = (errorMessage = "Resource not found.") => {
     };
 };
 
-module.exports = { 
-    exceptionHandler, 
-    formatExceptions, 
+module.exports = {
+    exceptionHandler,
+    formatExceptions,
     formatLoggerExceptions,
     handleBadRequests,
-    handleNotFoundErrors
+    handleNotFoundErrors,
 };
