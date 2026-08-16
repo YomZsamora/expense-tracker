@@ -8,31 +8,28 @@ const tokenService = require('../../services/token-service');
 const refreshTokenRepository = require('../../repositories/refresh-token-repository');
 const { logoutController } = require('../../app/controllers/auth-controllers');
 
-const TEST_EMAIL    = 'logouttest@test.local';
+const TEST_EMAIL = 'logouttest@test.local';
 const TEST_PASSWORD = 'TestLogout@1';
 
 describe('Logout API - POST /v1/auth/logout', () => {
-
     let logoutUser;
 
     beforeAll(async () => {
         logoutUser = await User.create({
+            name: 'Logout Test',
             email: TEST_EMAIL,
-            password: TEST_PASSWORD,
-            role: 'USER',
+            passwordHash: TEST_PASSWORD,
         });
     });
 
     afterAll(async () => {
         await RefreshToken.destroy({ where: { userId: logoutUser.id } });
-        await User.destroy({ where: { id: logoutUser.id } });
+        await User.destroy({ where: { id: logoutUser.id }, force: true });
     });
 
     describe('Success', () => {
-
         it('should return 200 with success message when no tokens are provided', async () => {
-            const res = await request(app)
-                .post('/v1/auth/logout');
+            const res = await request(app).post('/v1/auth/logout');
 
             expect(res.status).toBe(200);
             expect(res.body).toMatchObject({
@@ -61,7 +58,6 @@ describe('Logout API - POST /v1/auth/logout', () => {
             const { token, jti } = tokenService.signAccessToken({
                 sub: logoutUser.id,
                 email: TEST_EMAIL,
-                role: 'USER',
             });
             const res = await request(app)
                 .post('/v1/auth/logout')
@@ -73,7 +69,6 @@ describe('Logout API - POST /v1/auth/logout', () => {
     });
 
     describe('Resilience', () => {
-
         it('should return 200 and silently ignore an invalid refresh_token cookie', async () => {
             const res = await request(app)
                 .post('/v1/auth/logout')
@@ -98,14 +93,12 @@ describe('Logout API - POST /v1/auth/logout', () => {
     });
 
     describe('Error propagation', () => {
-        
         it('should call next() with an error if the controller throws', async () => {
             const req = { cookies: {}, headers: {} };
-            const res = {};  // no clearCookie method → TypeError when clearRefreshCookie(res) is called
+            const res = {}; // no clearCookie method → TypeError when clearRefreshCookie(res) is called
             const next = jest.fn();
             await logoutController(req, res, next);
             expect(next).toHaveBeenCalledWith(expect.any(Error));
         });
     });
-
 });

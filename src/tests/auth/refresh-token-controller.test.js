@@ -9,43 +9,31 @@ const tokenService = require('../../services/token-service');
 const { loadPrivateKey } = require('../../utils/keys');
 const { refreshTokenController } = require('../../app/controllers/auth-controllers');
 
-const TEST_EMAIL    = 'refreshtest@test.local';
+const TEST_EMAIL = 'refreshtest@test.local';
 const TEST_PASSWORD = 'TestRefresh@1';
 
 describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
-
     let refreshUser;
-    let validCookie;      // from login — backed by a real DB record
-    let orphanedCookie;   // valid JWT signature, intentionally NOT stored in DB
-    let expiredCookie;    // RS256-signed JWT with expiresIn: -1
+    let validCookie;
+    let orphanedCookie;
+    let expiredCookie;
 
     beforeAll(async () => {
-
-        // Create the test user
         refreshUser = await User.create({
+            name: 'Refresh Test',
             email: TEST_EMAIL,
-            password: TEST_PASSWORD,
-            role: 'USER',
+            passwordHash: TEST_PASSWORD,
         });
 
-        // 1. Real login → gets a genuine RS256 refresh token stored in the DB
         const loginRes = await request(app)
             .post('/v1/auth/basic-login')
             .send({ email: TEST_EMAIL, password: TEST_PASSWORD });
 
-        // The Set-Cookie header looks like:
-        //   'refresh_token=eyJ...; Path=/v1/auth/refresh-token; HttpOnly; ...'
-        // The Cookie REQUEST header only wants 'name=value' — strip everything after the first ';'
         validCookie = loginRes.headers['set-cookie'][0].split(';')[0];
-        // → 'refresh_token=eyJ...'
 
-        // 2. Orphaned token: valid RS256 JWT, but deliberately never stored in refresh_tokens table.
-        //    Sending this will pass verifyRefreshToken but fail findByJti → TokenReuseDetected.
         const { token: orphanedToken } = tokenService.signRefreshToken({ sub: refreshUser.id });
         orphanedCookie = `refresh_token=${orphanedToken}`;
 
-        // 3. Expired token: sign directly with the private key and expiresIn: -1 (1 second in the past).
-        //    Must use RS256 — verifyRefreshToken calls jwt.verify with loadPublicKey().
         const expiredToken = jwt.sign(
             { sub: refreshUser.id, jti: 'test-expired-jti' },
             loadPrivateKey(),
@@ -55,15 +43,13 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
     });
 
     afterAll(async () => {
-        // Clean refresh tokens first (FK is SET NULL, so User.destroy won't cascade)
         await RefreshToken.destroy({ where: { userId: refreshUser.id } });
-        await User.destroy({ where: { id: refreshUser.id } });
+        await User.destroy({ where: { id: refreshUser.id }, force: true });
     });
 
     describe('Authentication', () => {
         it('should return 401 if no refresh_token cookie is provided', async () => {
-            const res = await request(app)
-                .post('/v1/auth/refresh-token');
+            const res = await request(app).post('/v1/auth/refresh-token');
 
             expect(res.status).toBe(401);
             expect(res.body).toMatchObject({
@@ -117,10 +103,9 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
             expect(data.tokenType).toBe('Bearer');
             expect(typeof data.expiresIn).toBe('number');
 
-            // A new refresh cookie must be set
             const setCookieHeader = res.headers['set-cookie'];
             expect(setCookieHeader).toBeDefined();
-            const refreshCookie = setCookieHeader.find(c => c.startsWith('refresh_token='));
+            const refreshCookie = setCookieHeader.find((c) => c.startsWith('refresh_token='));
             expect(refreshCookie).toBeDefined();
             expect(refreshCookie).toContain('HttpOnly');
             expect(refreshCookie).toContain('Path=/v1/auth/refresh-token');
@@ -128,11 +113,6 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
     });
 
     describe('Token reuse', () => {
-        // NOTE: 'Success' must run before this describe block.
-        // The orphanedCookie was never stored in the DB, so verifyRefreshToken passes
-        // but findByJti returns null → revokeAllUserSessions → TokenReuseDetected.
-        // revokeAllUserSessions deletes ALL tokens for refreshUser.id; if this ran before
-        // 'Success', it would remove the validCookie backing record and make that test fail.
         it('should return 401 and revoke all sessions when the refresh token is not in the DB', async () => {
             const res = await request(app)
                 .post('/v1/auth/refresh-token')
@@ -148,9 +128,6 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
 
     describe('Error propagation', () => {
         it('should call next() with an error if the controller throws', async () => {
-            // payload exists but sub/jti are undefined
-            // → userRepository.findUserById(undefined) returns null
-            // → controller throws NotFound → caught by catch → next(error)
             const req = { payload: {} };
             const res = {};
             const next = jest.fn();
@@ -160,5 +137,4 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
             expect(next).toHaveBeenCalledWith(expect.any(Error));
         });
     });
-
 });
