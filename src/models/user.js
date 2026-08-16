@@ -1,58 +1,53 @@
 const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../configs/sequelize');
-const roles = ['ADMIN', 'USER', 'VENUE', 'PERFORMER'];
+const config = require('../configs/config');
 
-const User = sequelize.define('User', {
+const User = sequelize.define(
+    'User',
+    {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
 
-    id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-    },
+        name: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+        },
 
-    email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-        validate: { isEmail: true },
-    },
-
-    password: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    
-    role: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'user',
-        validate: { isIn: [roles] }
-    },
-}, {
-    tableName: 'users',
-    indexes: [
-        {
-            name: 'idx_users_googleSub',
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false,
             unique: true,
-            fields: ['googleSub'],
-        }
-    ],
-    hooks: {
-        beforeCreate: (user) => {
-            if (user.email) user.email = user.email.trim().toLowerCase();
-            if (user.password) user.password = hashPassword(user.password);
-        }
+            validate: { isEmail: true },
+        },
+
+        passwordHash: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
+    },
+    {
+        tableName: 'users',
+        paranoid: true,
+        hooks: {
+            beforeCreate: (user) => {
+                if (user.email) user.email = user.email.trim().toLowerCase();
+                if (user.passwordHash) user.passwordHash = hashPassword(user.passwordHash);
+            },
+        },
     }
-});
+);
 
 const hashPassword = (password) => {
-    const saltRounds = 10;
+    const saltRounds = Number(config.app.BCRYPT_ROUNDS) || 12;
     return bcrypt.hashSync(password, saltRounds);
 };
 
 User.prototype.isValidPassword = function (password) {
-    return bcrypt.compareSync(password, this.password); // Compare hashed password with provided password
+    return bcrypt.compareSync(password, this.passwordHash);
 };
 
-module.exports = { User, roles };
+module.exports = { User };
