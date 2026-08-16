@@ -26,5 +26,6 @@ module.exports = {
         JWT_KEY_ID: process.env.JWT_KEY_ID,
         JWT_ACCESS_TOKEN_TTL: process.env.JWT_ACCESS_TOKEN_TTL,
         JWT_REFRESH_TOKEN_TTL: process.env.JWT_REFRESH_TOKEN_TTL,
+        BCRYPT_ROUNDS: process.env.BCRYPT_ROUNDS,
     },
 };
