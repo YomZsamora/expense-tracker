@@ -15,10 +15,10 @@ const {
 const basicRegistrationMiddleware = [
     nameFieldValidator,
     emailFieldValidator,
-    emailRegisteredValidator,
     registrationPasswordFieldValidator,
     passwordConfirmationFieldValidator,
     handleBadRequests('Error occurred during registration.'),
+    emailRegisteredValidator,
 ];
 
 const basicLoginMiddleware = [
