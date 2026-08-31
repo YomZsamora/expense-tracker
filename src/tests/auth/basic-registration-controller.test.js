@@ -5,7 +5,7 @@ const app = require('../../index');
 const { User } = require('../../models/user');
 const { basicRegistrationController } = require('../../app/controllers/auth-controllers');
 
-describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
+describe('Basic Registration API - POST /v1/auth/register', () => {
     let validPayload;
 
     beforeAll(async () => {
@@ -36,7 +36,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
         it('should return 400 if name is missing', async () => {
             delete validPayload.name;
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -46,7 +46,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
         it('should return 400 if name is fewer than 2 characters', async () => {
             validPayload.name = 'A';
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -56,7 +56,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
         it('should return 400 if email is not a valid format', async () => {
             validPayload.email = 'not-an-email';
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -67,7 +67,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
         it('should return 400 if email is already registered', async () => {
             validPayload.email = 'existing@test.local';
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -80,7 +80,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
         it('should return 400 if password is missing', async () => {
             delete validPayload.password;
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -91,7 +91,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
             validPayload.password = 'Ab!1';
             validPayload.passwordConfirm = 'Ab!1';
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -105,7 +105,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
             validPayload.password = 'LongP@ss123456789012345678'; // 26 chars
             validPayload.passwordConfirm = validPayload.password;
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -116,7 +116,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
             validPayload.password = 'Password123'; // no special character
             validPayload.passwordConfirm = 'Password123';
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -129,7 +129,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
         it('should return 400 if passwordConfirm is missing', async () => {
             delete validPayload.passwordConfirm;
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -142,7 +142,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
         it('should return 400 if passwordConfirm does not match password', async () => {
             validPayload.passwordConfirm = 'DifferentP@ss1';
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(400);
@@ -153,7 +153,7 @@ describe('Basic Registration API - POST /v1/auth/basic-registration', () => {
     describe('Success', () => {
         it('should return 201 and the serialized user on a valid registration', async () => {
             const res = await request(app)
-                .post('/v1/auth/basic-registration')
+                .post('/v1/auth/register')
                 .send(validPayload);
 
             expect(res.status).toBe(201);
