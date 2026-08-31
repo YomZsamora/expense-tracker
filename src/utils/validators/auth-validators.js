@@ -38,12 +38,15 @@ const emailFieldValidator = body('email')
         return true;
     });
 
-const emailRegisteredValidator = (req, res, next) => {
-    return body('email').custom(async (email, { req }) => {
-        const user = await userRepository.userEmailExists(email);
-        if (user) return next(new Conflict(`${email} is already in use. Please choose a different email.`));
-    })(req, res, next);
-}
+const emailRegisteredValidator = async (req, res, next) => {
+    try {
+        const exists = await userRepository.userEmailExists(req.body?.email);
+        if (exists) return next(new Conflict(`${req.body.email} is already in use. Please choose a different email.`));
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
 
 const registrationPasswordFieldValidator = body('password')
     .not()
