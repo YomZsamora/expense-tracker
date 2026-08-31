@@ -1,5 +1,5 @@
 const { body } = require('express-validator');
-const { BadRequest, NotFound, NotAuthenticated, TokenReuseDetected } = require('../exceptions/custom-exceptions');
+const { BadRequest, NotFound, NotAuthenticated, TokenReuseDetected, Conflict } = require('../exceptions/custom-exceptions');
 const userRepository = require('../../repositories/user-repository');
 const refreshTokenRepository = require('../../repositories/refresh-token-repository');
 const { verifyRefreshToken } = require('../../services/token-service');
@@ -38,10 +38,12 @@ const emailFieldValidator = body('email')
         return true;
     });
 
-const emailRegisteredValidator = body('email').custom(async (email) => {
-    const user = await userRepository.userEmailExists(email);
-    if (user) return Promise.reject(`${email} is already in use. Please choose a different email.`);
-});
+const emailRegisteredValidator = (req, res, next) => {
+    return body('email').custom(async (email, { req }) => {
+        const user = await userRepository.userEmailExists(email);
+        if (user) return next(new Conflict(`${email} is already in use. Please choose a different email.`));
+    })(req, res, next);
+}
 
 const registrationPasswordFieldValidator = body('password')
     .not()
