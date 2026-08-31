@@ -12,7 +12,7 @@ const { refreshTokenController } = require('../../app/controllers/auth-controlle
 const TEST_EMAIL = 'refreshtest@test.local';
 const TEST_PASSWORD = 'TestRefresh@1';
 
-describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
+describe('Refresh Token API - POST /v1/auth/refresh', () => {
     let refreshUser;
     let validCookie;
     let orphanedCookie;
@@ -26,7 +26,7 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
         });
 
         const loginRes = await request(app)
-            .post('/v1/auth/basic-login')
+            .post('/v1/auth/login')
             .send({ email: TEST_EMAIL, password: TEST_PASSWORD });
 
         validCookie = loginRes.headers['set-cookie'][0].split(';')[0];
@@ -49,7 +49,7 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
 
     describe('Authentication', () => {
         it('should return 401 if no refresh_token cookie is provided', async () => {
-            const res = await request(app).post('/v1/auth/refresh-token');
+            const res = await request(app).post('/v1/auth/refresh');
 
             expect(res.status).toBe(401);
             expect(res.body).toMatchObject({
@@ -62,7 +62,7 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
     describe('Validation', () => {
         it('should return 401 if the refresh_token cookie is not a valid JWT', async () => {
             const res = await request(app)
-                .post('/v1/auth/refresh-token')
+                .post('/v1/auth/refresh')
                 .set('Cookie', 'refresh_token=notavalidtoken');
 
             expect(res.status).toBe(401);
@@ -74,7 +74,7 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
 
         it('should return 401 if the refresh_token JWT is expired', async () => {
             const res = await request(app)
-                .post('/v1/auth/refresh-token')
+                .post('/v1/auth/refresh')
                 .set('Cookie', expiredCookie);
 
             expect(res.status).toBe(401);
@@ -88,7 +88,7 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
     describe('Success', () => {
         it('should return 200, a new access token, and a rotated refresh_token cookie', async () => {
             const res = await request(app)
-                .post('/v1/auth/refresh-token')
+                .post('/v1/auth/refresh')
                 .set('Cookie', validCookie);
 
             expect(res.status).toBe(200);
@@ -108,14 +108,14 @@ describe('Refresh Token API - POST /v1/auth/refresh-token', () => {
             const refreshCookie = setCookieHeader.find((c) => c.startsWith('refresh_token='));
             expect(refreshCookie).toBeDefined();
             expect(refreshCookie).toContain('HttpOnly');
-            expect(refreshCookie).toContain('Path=/v1/auth/refresh-token');
+            expect(refreshCookie).toContain('Path=/v1/auth/refresh');
         });
     });
 
     describe('Token reuse', () => {
         it('should return 401 and revoke all sessions when the refresh token is not in the DB', async () => {
             const res = await request(app)
-                .post('/v1/auth/refresh-token')
+                .post('/v1/auth/refresh')
                 .set('Cookie', orphanedCookie);
 
             expect(res.status).toBe(401);
