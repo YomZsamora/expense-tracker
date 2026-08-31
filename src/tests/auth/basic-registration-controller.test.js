@@ -3,6 +3,7 @@
 const request = require('supertest');
 const app = require('../../index');
 const { User } = require('../../models/user');
+const { RefreshToken } = require('../../models/refresh-token');
 const { basicRegistrationController } = require('../../app/controllers/auth-controllers');
 
 describe('Basic Registration API - POST /v1/auth/register', () => {
@@ -26,11 +27,18 @@ describe('Basic Registration API - POST /v1/auth/register', () => {
     });
 
     afterAll(async () => {
-        await User.destroy({
-            where: { email: ['existing@test.local', 'newuser@test.local'] },
-            force: true,
-        });
+    const users = await User.findAll({
+        where: { email: ['existing@test.local', 'newuser@test.local'] },
+        attributes: ['id'],
+        paranoid: false,
     });
+    const ids = users.map((u) => u.id);
+    await RefreshToken.destroy({ where: { userId: ids } });
+    await User.destroy({
+        where: { email: ['existing@test.local', 'newuser@test.local'] },
+        force: true,
+    });
+});
 
     describe('Validation', () => {
         it('should return 400 if name is missing', async () => {
@@ -171,6 +179,12 @@ describe('Basic Registration API - POST /v1/auth/register', () => {
             expect(data.user).not.toHaveProperty('passwordConfirm');
 
             expect(data).toHaveProperty('accessToken');
+
+            const setCookieHeader = res.headers['set-cookie'];
+            expect(setCookieHeader).toBeDefined();
+            expect(setCookieHeader[0]).toContain('refresh_token=');
+            expect(setCookieHeader[0]).toContain('HttpOnly');
+            expect(setCookieHeader[0]).toContain('Path=/v1/auth/refresh');
         });
     });
 
