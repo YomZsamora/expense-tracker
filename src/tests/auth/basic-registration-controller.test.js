@@ -70,9 +70,9 @@ describe('Basic Registration API - POST /v1/auth/register', () => {
                 .post('/v1/auth/register')
                 .send(validPayload);
 
-            expect(res.status).toBe(400);
-            expect(res.body.data).toHaveProperty(
-                'email',
+            expect(res.status).toBe(409);
+            expect(res.body).toHaveProperty(
+                'message',
                 'existing@test.local is already in use. Please choose a different email.'
             );
         });
@@ -162,15 +162,15 @@ describe('Basic Registration API - POST /v1/auth/register', () => {
 
             const data = res.body.data;
 
-            expect(data).toHaveProperty('id');
-            expect(data).toHaveProperty('name', 'New User');
-            expect(data).toHaveProperty('email', 'newuser@test.local');
-            expect(data).toHaveProperty('createdAt');
-            expect(data).toHaveProperty('updatedAt');
+            expect(data.user).toHaveProperty('id');
+            expect(data.user).toHaveProperty('name', 'New User');
+            expect(data.user).toHaveProperty('email', 'newuser@test.local');
 
             // Sensitive fields must not be exposed
-            expect(data).not.toHaveProperty('passwordHash');
-            expect(data).not.toHaveProperty('passwordConfirm');
+            expect(data.user).not.toHaveProperty('passwordHash');
+            expect(data.user).not.toHaveProperty('passwordConfirm');
+
+            expect(data).toHaveProperty('accessToken');
         });
     });
 
