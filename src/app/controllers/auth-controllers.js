@@ -31,9 +31,20 @@ const basicRegistrationController = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
         const user = await userRepository.registerUser({ name, email, password });
+        const { token: accessToken, expiresIn } = tokenService.signAccessToken({ 
+            sub: user.id,
+            email: user.email
+        });
+        const { token: refreshToken, jti } = tokenService.signRefreshToken({ sub: user.id });
+        await refreshTokenRepository.storeRefreshToken({
+            jti,
+            userId: user.id,
+            ttlSeconds: REFRESH_TOKEN_TTL
+        })
+        setRefreshCookie(res, refreshToken);
         const apiResponse = new ApiResponse();
         apiResponse.message = 'New user account created successfully.';
-        apiResponse.data = userSerializer.serializeUser(user);
+        apiResponse.data = { user: userSerializer.serializeAuthUser(user), accessToken, tokenType: 'Bearer', expiresIn };
         return res.status(201).json(apiResponse);
     } catch (error) {
         next(error);
