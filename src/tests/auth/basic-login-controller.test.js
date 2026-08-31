@@ -9,7 +9,7 @@ const { basicLoginController } = require('../../app/controllers/auth-controllers
 const TEST_EMAIL = 'logintest@test.local';
 const TEST_PASSWORD = 'TestLogin@1';
 
-describe('Basic Login API - POST /v1/auth/basic-login', () => {
+describe('Basic Login API - POST /v1/auth/login', () => {
     let loginUser;
     let validPayload;
 
@@ -36,7 +36,7 @@ describe('Basic Login API - POST /v1/auth/basic-login', () => {
     describe('Validation', () => {
         it('should return 400 if email is not a valid format', async () => {
             validPayload.email = 'not-an-email';
-            const res = await request(app).post('/v1/auth/basic-login').send(validPayload);
+            const res = await request(app).post('/v1/auth/login').send(validPayload);
 
             expect(res.status).toBe(400);
             expect(res.body).toMatchObject({
@@ -48,7 +48,7 @@ describe('Basic Login API - POST /v1/auth/basic-login', () => {
 
         it('should return 400 if password is missing', async () => {
             delete validPayload.password;
-            const res = await request(app).post('/v1/auth/basic-login').send(validPayload);
+            const res = await request(app).post('/v1/auth/login').send(validPayload);
 
             expect(res.status).toBe(400);
             expect(res.body).toMatchObject({
@@ -60,7 +60,7 @@ describe('Basic Login API - POST /v1/auth/basic-login', () => {
 
         it('should return 404 if the email is not registered', async () => {
             validPayload.email = 'nobody@test.local';
-            const res = await request(app).post('/v1/auth/basic-login').send(validPayload);
+            const res = await request(app).post('/v1/auth/login').send(validPayload);
 
             expect(res.status).toBe(404);
             expect(res.body).toMatchObject({
@@ -71,7 +71,7 @@ describe('Basic Login API - POST /v1/auth/basic-login', () => {
 
         it('should return 400 if the password is incorrect', async () => {
             validPayload.password = 'WrongP@ssword1';
-            const res = await request(app).post('/v1/auth/basic-login').send(validPayload);
+            const res = await request(app).post('/v1/auth/login').send(validPayload);
 
             expect(res.status).toBe(400);
             expect(res.body).toMatchObject({
@@ -84,7 +84,7 @@ describe('Basic Login API - POST /v1/auth/basic-login', () => {
 
     describe('Success', () => {
         it('should return 200 with an access token and set a refresh token cookie', async () => {
-            const res = await request(app).post('/v1/auth/basic-login').send(validPayload);
+            const res = await request(app).post('/v1/auth/login').send(validPayload);
 
             expect(res.status).toBe(200);
             expect(res.body).toMatchObject({
@@ -104,7 +104,7 @@ describe('Basic Login API - POST /v1/auth/basic-login', () => {
             expect(setCookieHeader).toBeDefined();
             expect(setCookieHeader[0]).toContain('refresh_token=');
             expect(setCookieHeader[0]).toContain('HttpOnly');
-            expect(setCookieHeader[0]).toContain('Path=/v1/auth/refresh-token');
+            expect(setCookieHeader[0]).toContain('Path=/v1/auth/refresh');
         });
     });
 
