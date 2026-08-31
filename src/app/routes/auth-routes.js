@@ -3,7 +3,7 @@ const {
     basicRegistrationMiddleware, 
     basicLoginMiddleware,
     refreshTokenMiddleware
-} = require('../middlewares/auth-middlewares');
+} = require('../middlewares/authentication-middlewares');
 const { 
     basicRegistrationController, 
     basicLoginController,
