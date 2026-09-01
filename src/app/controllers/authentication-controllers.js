@@ -32,7 +32,6 @@ const clearRefreshCookie = (res) => {
 const basicRegistrationController = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
-        // Both writes are inside one transaction — if either fails, both roll back
         const { user, accessToken, expiresIn, refreshToken } = await sequelize.transaction(async (t) => {
             const newUser = await userRepository.registerUser( { name, email, password }, { transaction: t } );
             await categoryRepository.seedDefaultCategories(newUser.id, { transaction: t });
@@ -50,7 +49,6 @@ const basicRegistrationController = async (req, res, next) => {
             }, { transaction: t });
             return { user: newUser, accessToken, expiresIn, refreshToken };
         });
-
         setRefreshCookie(res, refreshToken);
         const apiResponse = new ApiResponse();
         apiResponse.message = 'New user account created successfully.';
