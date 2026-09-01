@@ -1,9 +1,11 @@
 const { ApiResponse } = require('../../utils/responses');
 const userRepository = require('../../repositories/user-repository');
 const refreshTokenRepository = require('../../repositories/refresh-token-repository');
+const categoryRepository = require('../../repositories/category-repository');
 const userSerializer = require('../../utils/serializers/user-serializer');
 const tokenService = require('../../services/token-service');
 const { NotFound } = require('../../utils/exceptions/custom-exceptions');
+const sequelize = require('../../configs/sequelize');
 
 const config = require('../../configs/config');
 const REFRESH_TOKEN_TTL = Number(config.app.JWT_REFRESH_TOKEN_TTL);
@@ -30,21 +32,34 @@ const clearRefreshCookie = (res) => {
 const basicRegistrationController = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
-        const user = await userRepository.registerUser({ name, email, password });
-        const { token: accessToken, expiresIn } = tokenService.signAccessToken({ 
-            sub: user.id,
-            email: user.email
+        // Both writes are inside one transaction — if either fails, both roll back
+        const { user, accessToken, expiresIn, refreshToken } = await sequelize.transaction(async (t) => {
+            const newUser = await userRepository.registerUser( { name, email, password }, { transaction: t } );
+            await categoryRepository.seedDefaultCategories(newUser.id, { transaction: t });
+            const { token: accessToken, expiresIn } = tokenService.signAccessToken({
+                sub: newUser.id, 
+                email: newUser.email,
+            });
+            const { token: refreshToken, jti } = tokenService.signRefreshToken({
+                sub: newUser.id,
+            });
+            await refreshTokenRepository.storeRefreshToken({
+                jti, 
+                userId: newUser.id, 
+                ttlSeconds: REFRESH_TOKEN_TTL,
+            }, { transaction: t });
+            return { user: newUser, accessToken, expiresIn, refreshToken };
         });
-        const { token: refreshToken, jti } = tokenService.signRefreshToken({ sub: user.id });
-        await refreshTokenRepository.storeRefreshToken({
-            jti,
-            userId: user.id,
-            ttlSeconds: REFRESH_TOKEN_TTL
-        })
+
         setRefreshCookie(res, refreshToken);
         const apiResponse = new ApiResponse();
         apiResponse.message = 'New user account created successfully.';
-        apiResponse.data = { user: userSerializer.serializeAuthUser(user), accessToken, tokenType: 'Bearer', expiresIn };
+        apiResponse.data = {
+            user: userSerializer.serializeAuthUser(user),
+            accessToken,
+            tokenType: 'Bearer',
+            expiresIn,
+        };
         return res.status(201).json(apiResponse);
     } catch (error) {
         next(error);
