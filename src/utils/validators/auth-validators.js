@@ -3,7 +3,7 @@ const { BadRequest, NotFound, NotAuthenticated, TokenReuseDetected, Conflict } =
 const userRepository = require('../../repositories/user-repository');
 const refreshTokenRepository = require('../../repositories/refresh-token-repository');
 const { verifyRefreshToken } = require('../../services/token-service');
-const { clearRefreshCookie } = require('../../app/controllers/auth-controllers');
+const { clearRefreshCookie } = require('../../app/controllers/authentication-controllers.js');
 
 const nameFieldValidator = body('name')
     .not()
