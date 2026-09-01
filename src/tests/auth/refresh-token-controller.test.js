@@ -7,7 +7,7 @@ const { User } = require('../../models/user');
 const { RefreshToken } = require('../../models/refresh-token');
 const tokenService = require('../../services/token-service');
 const { loadPrivateKey } = require('../../utils/keys');
-const { refreshTokenController } = require('../../app/controllers/auth-controllers');
+const { refreshTokenController } = require('../../app/controllers/authentication-controllers.js');
 
 const TEST_EMAIL = 'refreshtest@test.local';
 const TEST_PASSWORD = 'TestRefresh@1';
