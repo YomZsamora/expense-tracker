@@ -4,7 +4,7 @@ const request = require('supertest');
 const app = require('../../index');
 const { User } = require('../../models/user');
 const { RefreshToken } = require('../../models/refresh-token');
-const { basicLoginController } = require('../../app/controllers/auth-controllers');
+const { basicLoginController } = require('../../app/controllers/authentication-controllers.js');
 
 const TEST_EMAIL = 'logintest@test.local';
 const TEST_PASSWORD = 'TestLogin@1';
