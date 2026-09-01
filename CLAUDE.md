@@ -87,7 +87,6 @@ All route controllers must return a response built with `ApiResponse` (from `uti
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `code` | `number` | HTTP status code (mirrors the actual HTTP status) |
 | `status` | `"success"` | `"error"` | Outcome of the operation |
 | `message` | `string` | Human-readable summary |
 | `data` | `object | array | null` | Response payload; always present (even when `null`) |
