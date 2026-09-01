@@ -4,7 +4,7 @@ const request = require('supertest');
 const app = require('../../index');
 const { User } = require('../../models/user');
 const { RefreshToken } = require('../../models/refresh-token');
-const { basicRegistrationController } = require('../../app/controllers/auth-controllers');
+const { basicRegistrationController } = require('../../app/controllers/authentication-controllers.js');
 
 describe('Basic Registration API - POST /v1/auth/register', () => {
     let validPayload;
