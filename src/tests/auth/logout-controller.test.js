@@ -6,7 +6,7 @@ const { User } = require('../../models/user');
 const { RefreshToken } = require('../../models/refresh-token');
 const tokenService = require('../../services/token-service');
 const refreshTokenRepository = require('../../repositories/refresh-token-repository');
-const { logoutController } = require('../../app/controllers/auth-controllers');
+const { logoutController } = require('../../app/controllers/authentication-controllers.js');
 
 const TEST_EMAIL = 'logouttest@test.local';
 const TEST_PASSWORD = 'TestLogout@1';
