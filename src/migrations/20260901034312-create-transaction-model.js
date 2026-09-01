@@ -29,7 +29,7 @@ module.exports = {
             deletedAt:   { type: Sequelize.DATE, allowNull: true },
         });
 
-        await queryInterface.addIndex('categories', ['userId', 'date'], {
+        await queryInterface.addIndex('transactions', ['userId', 'date'], {
             name: 'idx_transactions_userId_date',
         });
         await queryInterface.addIndex('transactions', ['userId', 'categoryId'], {
