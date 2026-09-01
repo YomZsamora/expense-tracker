@@ -481,7 +481,7 @@ src/tests/
   refresh-token-controller.test.js
   logout-controller.test.js
   jwks-controller.test.js
-  oauth-controllers.test.js
+  oauthentication-controllers.js.test.js
   ...
 ```
 
