@@ -9,7 +9,7 @@ const {
     basicLoginController,
     refreshTokenController,
     logoutController
-} = require('../controllers/auth-controllers');
+} = require('../controllers/authentication-controllers.js');
 
 const router = express.Router();
 
