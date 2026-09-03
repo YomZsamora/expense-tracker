@@ -1,6 +1,6 @@
 
 const serializeCategory = (category) => ({
-    id: category.id,
+    categoryId: category.id,
     name: category.name,
     type: category.type,
     isDefault: category.isDefault,
