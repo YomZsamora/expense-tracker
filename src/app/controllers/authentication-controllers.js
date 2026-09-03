@@ -126,18 +126,9 @@ const logoutController = async (req, res, next) => {
                 // token is invalid or already expired — nothing to revoke
             }
         }
-        const authHeader = req.headers.authorization;
-        if (authHeader?.startsWith('Bearer ')) {
-            const accessToken = authHeader.split(' ')[1];
-            try {
-                const payload = tokenService.verifyAccessToken(accessToken);
-                const remainingTtl = payload.exp - Math.floor(Date.now() / 1000);
-                if (remainingTtl > 0) {
-                    await tokenService.denylistToken({ jti: payload.jti, ttlSeconds: remainingTtl });
-                }
-            } catch (_) {
-                // token is invalid or expired — nothing to denylist
-            }
+        const remainingTtl = req.user.exp - Math.floor(Date.now() / 1000);
+        if (remainingTtl > 0) {
+            await tokenService.denylistToken({ jti: req.user.jti, ttlSeconds: remainingTtl });
         }
         clearRefreshCookie(res);
         const apiResponse = new ApiResponse();
