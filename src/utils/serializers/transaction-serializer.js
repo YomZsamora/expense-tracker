@@ -1,11 +1,11 @@
 
 const serializeTransaction = (transaction) => ({
-    id: transaction.id,
+    transactionId: transaction.id,
     amount: parseFloat(transaction.amount),
     type: transaction.type,
-    category: transaction.category ? { 
-        id: transaction.category.id, 
-        name: transaction.category.name 
+    category: transaction.category ? {
+        categoryId: transaction.category.id,
+        name: transaction.category.name,
     } : null,
     date: transaction.date,
     description: transaction.description ?? null,
