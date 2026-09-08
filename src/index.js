@@ -4,9 +4,11 @@ const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('./configs/sequelize');
+require('./models/associations');
 const authRoutes = require('./app/routes/auth-routes');
 const userRoutes = require('./app/routes/user-routes');
 const categoryRoutes = require('./app/routes/category-routes');
+const transactionRoutes = require('./app/routes/transaction-routes');
 const { exceptionHandler } = require('./utils/exceptions/exception-handler');
 
 dotenv.config();
@@ -22,6 +24,7 @@ app.get('/health', (req, res) => res.send('The expense tracker is running.'));
 app.use('/v1/auth/', authRoutes);
 app.use('/v1/users/', userRoutes);
 app.use('/v1/categories/', categoryRoutes);
+app.use('/v1/transactions/', transactionRoutes);
 
 app.use(exceptionHandler);
 
