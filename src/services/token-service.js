@@ -1,3 +1,5 @@
+'use strict';
+
 const jwt = require('jsonwebtoken');
 const { randomUUID } = require('crypto');
 const redis = require('../configs/redis');
