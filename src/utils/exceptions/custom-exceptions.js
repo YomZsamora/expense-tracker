@@ -1,3 +1,5 @@
+'use strict';
+
 class BadRequest extends Error {
     constructor(message, errors = null) {
         super(message);
