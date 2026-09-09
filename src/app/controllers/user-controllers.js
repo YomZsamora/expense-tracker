@@ -1,3 +1,5 @@
+'use strict';
+
 const userRepository = require('../../repositories/user-repository');
 const { NotFound } = require('../../utils/exceptions/custom-exceptions');
 const { ApiResponse } = require('../../utils/responses');
