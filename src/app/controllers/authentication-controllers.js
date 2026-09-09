@@ -1,3 +1,5 @@
+'use strict';
+
 const { ApiResponse } = require('../../utils/responses');
 const userRepository = require('../../repositories/user-repository');
 const refreshTokenRepository = require('../../repositories/refresh-token-repository');
