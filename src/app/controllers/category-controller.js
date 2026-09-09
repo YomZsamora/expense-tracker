@@ -4,6 +4,12 @@ const { ApiResponse } = require('../../utils/responses');
 const categoryRepository = require('../../repositories/category-repository');
 const categorySerializer = require('../../utils/serializers/category-serializer');
 
+/** * Lists all categories for a user.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the list of categories.
+ */
 const listCategoriesController = async (req, res, next) => {
     try {
         const categories = await categoryRepository.findUserCategories(req.user.sub);
@@ -16,6 +22,12 @@ const listCategoriesController = async (req, res, next) => {
     }
 };
 
+/** * Creates a new category.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the created category.
+ */
 const createCategoryController = async (req, res, next) => {
     try {
         const { name, type } = req.body;
@@ -29,6 +41,12 @@ const createCategoryController = async (req, res, next) => {
     }
 };
 
+/** * Updates a category.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the updated category.
+ */
 const updateCategoryController = async (req, res, next) => {
     try {
         const updated = await categoryRepository.updateCategory(req.params.id, { name: req.body.name });
@@ -41,6 +59,12 @@ const updateCategoryController = async (req, res, next) => {
     }
 };
 
+/** * Deletes a category.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the deleted category.
+ */
 const deleteCategoryController = async (req, res, next) => {
     try {
         await categoryRepository.deleteCategory(req.category.id);
