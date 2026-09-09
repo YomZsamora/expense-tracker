@@ -1,3 +1,5 @@
+'use strict';
+
 const { handleBadRequests } = require('../../utils/exceptions/exception-handler');
 const {
     nameFieldValidator,
