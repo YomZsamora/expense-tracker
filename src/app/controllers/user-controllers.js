@@ -5,6 +5,12 @@ const { NotFound } = require('../../utils/exceptions/custom-exceptions');
 const { ApiResponse } = require('../../utils/responses');
 const userSerializer = require('../../utils/serializers/user-serializer');
 
+/** * Retrieves a user by their ID.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the retrieved user.
+ */
 const getUserController = async (req, res, next) => {
     try {
         const userId = req.user.sub;
