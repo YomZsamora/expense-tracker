@@ -1,3 +1,5 @@
+'use strict';
+
 const { body } = require('express-validator');
 const { BadRequest, NotFound, NotAuthenticated, TokenReuseDetected, Conflict } = require('../exceptions/custom-exceptions');
 const userRepository = require('../../repositories/user-repository');
