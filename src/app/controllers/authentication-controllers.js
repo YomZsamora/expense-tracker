@@ -12,6 +12,11 @@ const sequelize = require('../../configs/sequelize');
 const config = require('../../configs/config');
 const REFRESH_TOKEN_TTL = Number(config.app.JWT_REFRESH_TOKEN_TTL);
 
+/** * Sets the refresh cookie in the response.
+ * @param {Object} res - The response object.
+ * @param {string} token - The refresh token.
+ * @returns {void} - Sets the refresh cookie in the response.
+ */
 const setRefreshCookie = (res, token) => {
     res.cookie('refresh_token', token, {
         httpOnly: true,
@@ -22,6 +27,10 @@ const setRefreshCookie = (res, token) => {
     });
 };
 
+/** * Clears the refresh cookie in the response.
+ * @param {Object} res - The response object.
+ * @returns {void} - Clears the refresh cookie in the response.
+ */
 const clearRefreshCookie = (res) => {
     res.clearCookie('refresh_token', {
         httpOnly: true,
@@ -31,6 +40,12 @@ const clearRefreshCookie = (res) => {
     });
 };
 
+/** * Creates a new user account.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the created user account.
+ */
 const basicRegistrationController = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
@@ -66,6 +81,12 @@ const basicRegistrationController = async (req, res, next) => {
     }
 };
 
+/** * Logs in a user.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the logged in user.
+ */
 const basicLoginController = async (req, res, next) => {
     try {
         const user = req.user;
@@ -90,6 +111,12 @@ const basicLoginController = async (req, res, next) => {
     }
 };
 
+/** * Refreshes a user's access token.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the refreshed access token.
+ */
 const refreshTokenController = async (req, res, next) => {
     try {
         const { sub, jti } = req.payload;
@@ -117,6 +144,12 @@ const refreshTokenController = async (req, res, next) => {
     }
 };
 
+/** * Logs out a user.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the logged out user.
+ */
 const logoutController = async (req, res, next) => {
     try {
         const refreshToken = req.cookies?.refresh_token;
