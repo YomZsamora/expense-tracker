@@ -4,6 +4,12 @@ const { ApiResponse } = require('../../utils/responses');
 const transactionRepository = require('../../repositories/transaction-repository');
 const transactionSerializer = require('../../utils/serializers/transaction-serializer');
 
+/** * Creates a new transaction.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the created transaction.
+ */
 const createTransactionController = async (req, res, next) => {
     try {
         const { amount, type, categoryId, date, description } = req.body;
@@ -25,6 +31,12 @@ const createTransactionController = async (req, res, next) => {
     }
 };
 
+/** * Retrieves a transaction by its ID.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the retrieved transaction.
+ */
 const getTransactionController = async (req, res, next) => {
     try {
         const apiResponse = new ApiResponse();
