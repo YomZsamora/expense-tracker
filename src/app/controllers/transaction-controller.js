@@ -25,4 +25,15 @@ const createTransactionController = async (req, res, next) => {
     }
 };
 
-module.exports = { createTransactionController };
+const getTransactionController = async (req, res, next) => {
+    try {
+        const apiResponse = new ApiResponse();
+        apiResponse.message = 'Transaction retrieved successfully.';
+        apiResponse.data = transactionSerializer.serializeTransaction(req.transaction);
+        return res.status(200).json(apiResponse);
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { createTransactionController, getTransactionController };
