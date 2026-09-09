@@ -10,8 +10,20 @@ const {
     categoryDeletableValidator,
 } = require('../../utils/validators/category-validators');
 
+/** * Lists all categories for a user.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the list of categories.
+ */
 const listCategoryMiddleware = [isUserAuthenticated];
 
+/** * Creates a new category.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the created category.
+ */
 const createCategoryMiddleware = [
     isUserAuthenticated,
     nameFieldValidator,
@@ -20,6 +32,12 @@ const createCategoryMiddleware = [
     categoryUniqueValidator,
 ];
 
+/** * Updates a category.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the updated category.
+ */
 const updateCategoryMiddleware = [
     isUserAuthenticated,
     nameFieldValidator,
@@ -28,6 +46,12 @@ const updateCategoryMiddleware = [
     categoryUniqueValidator,
 ];
 
+/** * Deletes a category.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {Function} next - The next function.
+ * @returns {Promise<void>} - A promise that resolves to the deleted category.
+ */
 const deleteCategoryMiddleware = [
     isUserAuthenticated,
     resolveCategoryMiddleware,
