@@ -9,6 +9,7 @@ const {
     dateFieldValidator,
     descriptionFieldValidator,
     resolveCategoryForTransaction,
+    resolveTransactionMiddleware,
 } = require('../../utils/validators/transaction-validators');
 
 const createTransactionMiddleware = [
@@ -22,4 +23,9 @@ const createTransactionMiddleware = [
     resolveCategoryForTransaction,
 ];
 
-module.exports = { createTransactionMiddleware };
+const getTransactionMiddleware = [
+    isUserAuthenticated,
+    resolveTransactionMiddleware,
+];
+
+module.exports = { createTransactionMiddleware, getTransactionMiddleware };
