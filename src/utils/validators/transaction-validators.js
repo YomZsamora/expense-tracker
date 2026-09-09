@@ -1,8 +1,9 @@
 'use strict';
 
 const { body } = require('express-validator');
-const { BadRequest } = require('../exceptions/custom-exceptions');
+const { BadRequest, NotFound, PermissionDenied } = require('../exceptions/custom-exceptions');
 const categoryRepository = require('../../repositories/category-repository');
+const transactionRepository = require('../../repositories/transaction-repository');
 
 const amountFieldValidator = body('amount')
     .notEmpty().withMessage('Amount is required.')
@@ -56,6 +57,20 @@ const resolveCategoryForTransaction = async (req, res, next) => {
     }
 };
 
+// Resolves transaction by :id, checks ownership, attaches req.transaction.
+// Includes category join so the controller can serialize without a second fetch.
+const resolveTransactionMiddleware = async (req, res, next) => {
+    try {
+        const transaction = await transactionRepository.findTransactionById(req.params.id);
+        if (!transaction) return next(new NotFound('Transaction not found.'));
+        if (transaction.userId !== req.user.sub) return next(new PermissionDenied());
+        req.transaction = transaction;
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     amountFieldValidator,
     typeFieldValidator,
@@ -63,4 +78,5 @@ module.exports = {
     dateFieldValidator,
     descriptionFieldValidator,
     resolveCategoryForTransaction,
+    resolveTransactionMiddleware,
 };
