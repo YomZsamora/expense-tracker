@@ -1,3 +1,5 @@
+'use strict';
+
 const { verifyAccessToken, isDenylisted } = require('../../services/token-service');
 const { NotAuthenticated } = require('../../utils/exceptions/custom-exceptions')
 
