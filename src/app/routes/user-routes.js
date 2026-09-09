@@ -1,3 +1,5 @@
+'use strict';
+
 const express = require('express');
 const { getUserMiddlewares } = require('../middlewares/user-middlewares');
 const { getUserController } = require('../controllers/user-controllers');
