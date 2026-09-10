@@ -2,7 +2,6 @@
 
 const express = require('express');
 const {
-    listCategoryMiddleware,
     createCategoryMiddleware,
     updateCategoryMiddleware,
     deleteCategoryMiddleware,
@@ -16,7 +15,7 @@ const {
 
 const router = express.Router();
 
-router.get('/', listCategoryMiddleware, listCategoriesController);
+router.get('/', listCategoriesController);
 router.post('/', createCategoryMiddleware, createCategoryController);
 router.patch('/:id', updateCategoryMiddleware, updateCategoryController);
 router.delete('/:id', deleteCategoryMiddleware, deleteCategoryController);
