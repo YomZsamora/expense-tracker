@@ -1,7 +1,6 @@
 'use strict';
 
 const { handleBadRequests } = require('../../utils/exceptions/exception-handler');
-const { isUserAuthenticated } = require('./authorization-middlewares');
 const {
     amountFieldValidator,
     typeFieldValidator,
@@ -19,7 +18,6 @@ const {
  * @returns {Promise<void>} - A promise that resolves to the created transaction.
  */
 const createTransactionMiddleware = [
-    isUserAuthenticated,
     amountFieldValidator,
     typeFieldValidator,
     categoryIdFieldValidator,
@@ -36,7 +34,6 @@ const createTransactionMiddleware = [
  * @returns {Promise<void>} - A promise that resolves to the retrieved transaction.
  */
 const getTransactionMiddleware = [
-    isUserAuthenticated,
     resolveTransactionMiddleware,
 ];
 
