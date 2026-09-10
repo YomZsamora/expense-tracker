@@ -10,6 +10,7 @@ const userRoutes = require('./app/routes/user-routes');
 const categoryRoutes = require('./app/routes/category-routes');
 const transactionRoutes = require('./app/routes/transaction-routes');
 const { exceptionHandler } = require('./utils/exceptions/exception-handler');
+const { isUserAuthenticated } = require('./app/middlewares/authorization-middlewares');
 
 dotenv.config();
 const app = express();
@@ -22,9 +23,9 @@ app.use(cookieParser());
 
 app.get('/health', (req, res) => res.send('The expense tracker is running.'));
 app.use('/v1/auth/', authRoutes);
-app.use('/v1/users/', userRoutes);
-app.use('/v1/categories/', categoryRoutes);
-app.use('/v1/transactions/', transactionRoutes);
+app.use('/v1/users/', isUserAuthenticated, userRoutes);
+app.use('/v1/categories/', isUserAuthenticated, categoryRoutes);
+app.use('/v1/transactions/', isUserAuthenticated, transactionRoutes);
 
 app.use(exceptionHandler);
 
