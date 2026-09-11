@@ -45,7 +45,7 @@ const categoryUniqueValidator = async (req, res, next) => {
 const categoryDeletableValidator = async (req, res, next) => {
     try {
         if (req.category.isDefault) {
-            return next(new PermissionDenied('Default categories cannot be deleted.'));
+            return next(new PermissionDenied());
         }
         const hasTransactions = await categoryRepository.hasActiveTransactions(req.category.id);
         if (hasTransactions) {
