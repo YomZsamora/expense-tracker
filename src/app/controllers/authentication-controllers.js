@@ -144,41 +144,10 @@ const refreshTokenController = async (req, res, next) => {
     }
 };
 
-/** * Logs out a user.
- * @param {Object} req - The request object.
- * @param {Object} res - The response object.
- * @param {Function} next - The next function.
- * @returns {Promise<void>} - A promise that resolves to the logged out user.
- */
-const logoutController = async (req, res, next) => {
-    try {
-        const refreshToken = req.cookies?.refresh_token;
-        if (refreshToken) {
-            try {
-                const payload = tokenService.verifyRefreshToken(refreshToken);
-                await refreshTokenRepository.deleteByJti(payload.jti);
-            } catch (_) {
-                // token is invalid or already expired — nothing to revoke
-            }
-        }
-        const remainingTtl = req.user.exp - Math.floor(Date.now() / 1000);
-        if (remainingTtl > 0) {
-            await tokenService.denylistToken({ jti: req.user.jti, ttlSeconds: remainingTtl });
-        }
-        clearRefreshCookie(res);
-        const apiResponse = new ApiResponse();
-        apiResponse.message = 'Logged out successfully.';
-        return res.status(200).json(apiResponse);
-    } catch (error) {
-        next(error);
-    }
-};
-
 module.exports = {
     basicRegistrationController,
     basicLoginController,
     refreshTokenController,
-    logoutController,
     setRefreshCookie,
     clearRefreshCookie,
 };
