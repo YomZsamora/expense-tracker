@@ -22,7 +22,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Health check route
-app.get('/health', (req, res) => res.send('The Expense Tracker API is running.'));
+app.get('/health', (req, res) => {
+    res.send('The Expense Tracker API is running.')
+});
 
 // Public routes
 app.use('/v1/auth/', authRoutes);
