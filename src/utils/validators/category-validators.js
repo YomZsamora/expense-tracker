@@ -17,7 +17,7 @@ const typeFieldValidator = body('type')
 const resolveCategoryMiddleware = async (req, res, next) => {
     try {
         const category = await categoryRepository.findCategoryById(req.params.id);
-        if (!category) return next(new NotFound('Category not found.'));
+        if (!category) return next(new NotFound('The requested category could not found.'));
         if (category.userId !== req.user.sub) return next(new PermissionDenied());
         req.category = category;
         next();
