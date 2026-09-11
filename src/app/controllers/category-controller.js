@@ -69,8 +69,7 @@ const deleteCategoryController = async (req, res, next) => {
     try {
         await categoryRepository.deleteCategory(req.category.id);
         const apiResponse = new ApiResponse();
-        apiResponse.message = 'Category deleted successfully.';
-        return res.status(200).json(apiResponse);
+        return res.status(204).json(apiResponse);
     } catch (error) {
         next(error);
     }
