@@ -1,10 +1,10 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const helmet = require('helmet');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
 require('./configs/sequelize');
 require('./models/associations');
+const dotenv = require('dotenv');
+const helmet = require('helmet');
+const express = require('express');
+const cookieParser = require('cookie-parser');
 const authRoutes = require('./app/routes/auth-routes');
 const userRoutes = require('./app/routes/user-routes');
 const categoryRoutes = require('./app/routes/category-routes');
@@ -21,12 +21,19 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-app.get('/health', (req, res) => res.send('The expense tracker is running.'));
-app.use('/v1/auth/', authRoutes);
-app.use('/v1/users/', isUserAuthenticated, userRoutes);
-app.use('/v1/categories/', isUserAuthenticated, categoryRoutes);
-app.use('/v1/transactions/', isUserAuthenticated, transactionRoutes);
+// Health check route
+app.get('/health', (req, res) => res.send('The Expense Tracker API is running.'));
 
+// Public routes
+app.use('/v1/auth/', authRoutes);
+
+// Protected routes
+app.use(isUserAuthenticated);
+app.use('/v1/users/', userRoutes);
+app.use('/v1/categories/', categoryRoutes);
+app.use('/v1/transactions/', transactionRoutes);
+
+// Exception handler
 app.use(exceptionHandler);
 
 if (require.main === module) {
