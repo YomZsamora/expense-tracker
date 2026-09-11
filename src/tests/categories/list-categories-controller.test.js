@@ -7,8 +7,6 @@ const { Category } = require('../../models/category');
 const tokenService = require('../../services/token-service');
 const { listCategoriesController } = require('../../app/controllers/category-controller');
 
-const TEST_USER_ID = '00000000-0000-0000-0000-000000000010';
-const TEST_EMAIL = 'categorytest@test.local';
 
 describe('GET /v1/categories', () => {
 
@@ -16,29 +14,21 @@ describe('GET /v1/categories', () => {
     let customCategory;
 
     beforeAll(async () => {
-        await User.create({
-            id: TEST_USER_ID,
-            name: 'Category Test User',
-            email: TEST_EMAIL,
-            passwordHash: 'irrelevant',
-        });
-
+        user = await User.findOne({ where: { email: 'test.user@example.com' }});
         ({ token: accessToken } = tokenService.signAccessToken({
-            sub: TEST_USER_ID,
-            email: TEST_EMAIL,
+            sub: user.id,
+            email: user.email,
         }));
-
         customCategory = await Category.create({
-            userId: TEST_USER_ID,
-            name: 'Test Custom Category',
+            userId: user.id,
+            name: 'New List Category',
             type: 'expense',
             isDefault: false,
         });
     });
 
     afterAll(async () => {
-        await Category.destroy({ where: { userId: TEST_USER_ID }, force: true });
-        await User.destroy({ where: { id: TEST_USER_ID }, force: true });
+        await Category.destroy({ where: { userId: user.id }, force: true });
     });
     
     it('should return 401 when no Authorization header is provided', async () => {
