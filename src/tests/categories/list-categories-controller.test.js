@@ -2,6 +2,7 @@
 
 const request = require('supertest');
 const app = require('../../index');
+const { faker } = require('@faker-js/faker');
 const { User } = require('../../models/user');
 const { Category } = require('../../models/category');
 const tokenService = require('../../services/token-service');
@@ -10,11 +11,17 @@ const { listCategoriesController } = require('../../app/controllers/category-con
 
 describe('GET /v1/categories', () => {
 
+    let user;
     let accessToken;
     let customCategory;
 
     beforeAll(async () => {
-        user = await User.findOne({ where: { email: 'test.user@example.com' }});
+        user = await User.create({
+            id: faker.string.uuid(),
+            name: faker.person.fullName(),
+            email: faker.internet.email(),
+            passwordHash: 'irrelevant',
+        });
         ({ token: accessToken } = tokenService.signAccessToken({
             sub: user.id,
             email: user.email,
@@ -70,7 +77,7 @@ describe('GET /v1/categories', () => {
     });
 
     it('should call next() with an error if listCategoriesController throws', async () => {
-        const req = {}; // req.user is undefined → TypeError on req.user.sub
+        const req = {}; 
         const res = {};
         const next = jest.fn();
         await listCategoriesController(req, res, next);
