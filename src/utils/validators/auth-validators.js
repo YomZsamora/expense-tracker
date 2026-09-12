@@ -1,10 +1,10 @@
 'use strict';
 
 const { body } = require('express-validator');
-const { BadRequest, NotFound, NotAuthenticated, TokenReuseDetected, Conflict } = require('../exceptions/custom-exceptions');
-const userRepository = require('../../repositories/user-repository');
-const refreshTokenRepository = require('../../repositories/refresh-token-repository');
-const { verifyRefreshToken } = require('../../services/token-service');
+const { BadRequest, NotFound, NotAuthenticated, TokenReuseDetected, Conflict } = require('../exceptions/custom-exceptions.js');
+const userRepository = require('../../repositories/user-repository.js');
+const refreshTokenRepository = require('../../repositories/refresh-token-repository.js');
+const { verifyRefreshToken } = require('../../services/token-service.js');
 const { clearRefreshCookie } = require('../../app/controllers/authentication-controllers.js');
 
 const nameFieldValidator = body('name')
