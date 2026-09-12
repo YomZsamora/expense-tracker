@@ -58,8 +58,8 @@ const findUserTransactions = async (userId, {
     };
 };
 
-const updateTransaction = async (id, fields) => {
-    const [, [updated]] = await Transaction.update(fields, {
+const updateTransaction = async (id, updateData) => {
+    const [, [updated]] = await Transaction.update(updateData, {
         where: { id },
         returning: true
     });
