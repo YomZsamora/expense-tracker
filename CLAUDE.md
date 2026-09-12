@@ -20,7 +20,7 @@ across all projects in this ecosystem.
 | **Password hashing** | `bcryptjs` |
 | **IDs** | `uuid` (token `jti`, etc.) |
 | **Cookies** | `cookie-parser` |
-| **Testing** | Jest + Supertest |
+| **Testing** | Jest + Supertest + `@faker-js/faker` |
 | **Process manager** | `nodemon` (dev), `node` (prod) |
 
 ---
@@ -31,7 +31,7 @@ across all projects in this ecosystem.
 src/
   index.js                        # Express app entry point — registers routes, middleware, starts server
   app/
-    controllers/                     # Route controller functions (*-controller.js)
+    controllers/                  # Route controller functions (*-controller.js)
     middlewares/                  # Feature-level middleware arrays (*-middlewares.js)
     routes/                       # Express Router definitions (*-routes.js)
   configs/
@@ -39,19 +39,23 @@ src/
     sequelize.js                  # Sequelize instance, connects using configs/config.js
     redis.js                      # ioredis client instance
   models/                         # sequelize.define(...) model definitions (<model>.js, exports { ModelName })
+    associations.js               # All Sequelize associations — required once in index.js
   migrations/                     # Sequelize-CLI migrations (<timestamp>-<description>.js)
   repositories/                   # Data-access functions per resource (*-repository.js)
   services/                       # External-integration classes and internal multi-step logic modules
   tests/
     setup.js                      # Creates the test DB and runs migrations (intended as Jest globalSetup)
     teardown.js                   # Drops the test DB (intended as Jest globalTeardown)
-    setupFilesAfterEnv.js         # Per-test helpers (starts/stops the app, shared variables)
+    setupFilesAfterEnv.js         # Per-test teardown — closes sequelize and redis connections
+    authentication/               # Auth endpoint tests
+    categories/                   # Category endpoint tests
+    transactions/                 # Transaction endpoint tests
   utils/
     exceptions/
-      custom-exceptions.js        # Custom error classes (BadRequest, NotFound, TokenExpired, …)
-      exception-handler.js        # Global Express error handler + validation helpers
+      custom-exceptions.js        # Custom error classes (BadRequest, NotFound, Conflict, …)
+      exception-handler.js        # Global Express error handler + handleBadRequests helper
     serializers/                  # API response transformers, one file per resource (*-serializer.js)
-    validators/                   # express-validator chains per feature (*-validators.js)
+    validators/                   # express-validator chains + async middleware validators (*-validators.js)
     keys.js                       # Loads JWT signing keys from disk, builds the JWKS
     responses.js                  # ApiResponse class + status constants
 ```
@@ -61,13 +65,12 @@ src/
 ## Architecture Rules
 
 1. **Thin controllers** — route controllers (`-controller.js`) contain only: extract data from `req`, build `ApiResponse`, send `res`. No business logic.
-2. **Middleware arrays per route** — each route has a matching middleware array.
-3. **Service classes for external integrations** — anything that calls a third-party API lives in `src/services/` as a class with a `handle()` method. Internal multi-step logic that has no
-single natural entry point (e.g. signing/verifying JWTs) may instead be a plain function module — see [Service Classes](#service-classes) below for both patterns.
-4. **Repositories own data access** — controllers, validators, and services never call Sequelize models directly. All reads/writes go through a `*-repository.js` function in `src/repositories/`, called via a namespace import (`const userRepository = require('.../user-repository')`), not destructured.
-5. **Global error handler** — `exceptionHandler` from `utils/exceptions/exception-handler.js` is registered as the *last* middleware in `index.js`. controllers must call `next(error)` and never
-catch errors silently.
+2. **Middleware arrays per route** — each route has a matching middleware array in `*-middlewares.js`.
+3. **Service classes for external integrations** — anything that calls a third-party API lives in `src/services/` as a class with a `handle()` method. Internal multi-step logic that has no single natural entry point (e.g. signing/verifying JWTs) may instead be a plain function module — see [Service Classes](#service-classes) below for both patterns.
+4. **Repositories own data access** — controllers, validators, and services never call Sequelize models directly. All reads/writes go through a `*-repository.js` function in `src/repositories/`, called via a namespace import (`const categoryRepository = require('.../category-repository')`), not destructured.
+5. **Global error handler** — `exceptionHandler` from `utils/exceptions/exception-handler.js` is registered as the *last* middleware in `index.js`. Controllers must call `next(error)` and never catch errors silently.
 6. **No secrets in code** — all configuration values come from `process.env` via `dotenv`. Never hardcode connection strings, API keys, or credentials.
+7. **Global authentication middleware** — `isUserAuthenticated` is mounted at the app level (`app.use(isUserAuthenticated)`) before all protected route groups, not wired into individual middleware arrays. Public routes (e.g. `/v1/auth/`) are mounted before this middleware.
 
 ---
 
@@ -80,27 +83,27 @@ All route controllers must return a response built with `ApiResponse` (from `uti
 ```json
 {
   "status": "success",
-  "message": "Current weather retrieved successfully.",
+  "message": "Categories retrieved successfully.",
   "data": { ... }
 }
 ```
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `status` | `"success"` | `"error"` | Outcome of the operation |
+| `status` | `"success"` \| `"error"` | Outcome of the operation |
 | `message` | `string` | Human-readable summary |
-| `data` | `object | array | null` | Response payload; always present (even when `null`) |
+| `data` | `object \| array \| null` | Response payload; always present (even when `null`) |
 
-### Building Responses in controllers
+### Building Responses in Controllers
 
-```jsx
+```js
 const { ApiResponse } = require('../../../utils/responses');
 
-const mycontroller = async (req, res, next) => {
+const myController = async (req, res, next) => {
     try {
         // ... work ...
         const apiResponse = new ApiResponse();
-        apiResponse.message = 'Current weather retrieved successfully.';
+        apiResponse.message = 'Categories retrieved successfully.';
         apiResponse.data = result;
         return res.status(200).json(apiResponse);
     } catch (error) {
@@ -113,12 +116,15 @@ const mycontroller = async (req, res, next) => {
 
 | Code | When Used |
 | --- | --- |
-| `200 OK` | Successful read, update, delete |
+| `200 OK` | Successful read or update |
 | `201 Created` | Resource successfully created (POST) |
+| `204 No Content` | Successful delete (no body returned) |
 | `400 Bad Request` | Validation failure or malformed body |
-| `401 Unauthorized` | Missing or invalid authentication token |
-| `403 Forbidden` | Authenticated but lacks permission |
+| `401 Unauthorized` | Missing, invalid, or expired authentication token |
+| `403 Forbidden` | Authenticated but lacks permission (wrong owner, insufficient role) |
 | `404 Not Found` | Resource does not exist |
+| `409 Conflict` | Request conflicts with existing state (e.g. duplicate category name+type) |
+| `422 Unprocessable Entity` | Well-formed request that fails business logic validation |
 | `500 Internal Server Error` | Unhandled exception |
 
 ### Validation Error Response
@@ -128,23 +134,52 @@ When validation fails, `data` contains a map of field names to error messages:
 ```json
 {
   "status": "error",
-  "message": "Request failed.",
+  "message": "Error occurred while creating category.",
   "data": {
-    "latitude": "Latitude must be a decimal between -90 and 90.",
-    "longitude": "Longitude must be a decimal between -180 and 180."
+    "name": "Name is required.",
+    "type": "Type must be income or expense."
   }
 }
 ```
 
 ---
 
+## Custom Exceptions
+
+All custom error classes live in `src/utils/exceptions/custom-exceptions.js`. Every class sets `this.statusCode` and `this.name` so `exceptionHandler` can map them to the right HTTP response.
+
+| Class | Status | When to throw |
+| --- | --- | --- |
+| `BadRequest` | 400 | Validation failure not caught by express-validator |
+| `NotAuthenticated` | 401 | Missing or invalid auth credentials |
+| `TokenExpired` | 401 | JWT has expired |
+| `InvalidJsonWebToken` | 401 | JWT is malformed or signature is invalid |
+| `TokenReuseDetected` | 401 | Refresh token reuse detected — all sessions revoked |
+| `PermissionDenied` | 403 | Authenticated but wrong owner or insufficient role |
+| `NotFound` | 404 | Resource does not exist |
+| `Conflict` | 409 | Request conflicts with existing state (duplicate, locked resource) |
+| `UnprocessedEntity` | 422 | Business-logic rejection on a well-formed request |
+
+**Rule:** whenever a new exception class is added to `custom-exceptions.js`, a matching `instanceof` block must also be added to `exceptionHandler` in `exception-handler.js`.
+
+---
+
 ## Global Exception Handling
 
-All error-to-response mapping is centralised in `exceptionHandler` (from
-`utils/exceptions/exception-handler.js`), registered as the last middleware in `index.js`.
+All error-to-response mapping is centralised in `exceptionHandler` (`utils/exceptions/exception-handler.js`), registered as the last middleware in `index.js`.
 
-**controllers and middleware must never send error responses directly.** Always call `next(error)` to
-let the global handler produce a consistent response.
+**Controllers and middleware must never send error responses directly.** Always call `next(error)`.
+
+The `handleBadRequests(errorMessage)` helper from `exception-handler.js` is placed inside middleware arrays after `express-validator` chains to collect and format validation errors:
+
+```js
+const createCategoryMiddleware = [
+    nameFieldValidator,
+    typeFieldValidator,
+    handleBadRequests('Error occurred while creating category.'),  // runs after validators
+    categoryUniqueValidator,                                        // async DB check runs after
+];
+```
 
 ---
 
@@ -153,52 +188,103 @@ let the global handler produce a consistent response.
 - All routes are versioned under `/v1/<resource>/`.
 - Each feature has a single router file in `src/app/routes/<feature>-routes.js`.
 - Routers are mounted in `src/index.js`.
-- Route paths use `kebab-case` for multi-word segments (e.g. `/current-weather`, `/weather-forecast`).
-- **Exceptions to versioning:** well-known/discovery and infra endpoints are not versioned —
-`jwks-routes.js` is mounted at `/.well-known` (serves `/.well-known/jwks.json`) and `/health` is a
-plain unversioned liveness check defined directly in `index.js`.
+- Route paths use `kebab-case` for multi-word segments.
+- **Public routes** are mounted before `app.use(isUserAuthenticated)`. **Protected routes** are mounted after it.
+- **Exceptions to versioning:** `/health` is a plain unversioned liveness check defined directly in `index.js`.
 
 **Route file pattern:**
 
-```jsx
+```js
 const express = require('express');
-const { mycontroller } = require('../controllers/my-controller');
+const { myController } = require('../controllers/my-controller');
 const { myMiddleware } = require('../middlewares/my-middlewares');
 
 const router = express.Router();
-
-router.post('/weather-forecast', myMiddleware, mycontroller);
+router.post('/some-resource', myMiddleware, myController);
 
 module.exports = router;
 ```
 
 **index.js mounting pattern:**
 
-```jsx
-app.use('/v1/weather-ai/', weatherRoutes);
+```js
+// Public
+app.use('/v1/auth/', authRoutes);
+
+// Global auth guard
+app.use(isUserAuthenticated);
+
+// Protected
+app.use('/v1/categories/', categoryRoutes);
+app.use('/v1/transactions/', transactionRoutes);
+```
+
+---
+
+## Validators
+
+`src/utils/validators/<feature>-validators.js` holds two kinds of validators:
+
+### 1. express-validator chains
+
+Named exports built with `body(...)`. These run inside a middleware array alongside `handleBadRequests(...)`:
+
+```js
+const nameFieldValidator = body('name')
+    .trim()
+    .notEmpty().withMessage('Name is required.')
+    .isLength({ min: 2 }).withMessage('Name must be at least 2 characters.')
+    .isLength({ max: 100 }).withMessage('Name cannot exceed 100 characters.');
+```
+
+### 2. Async Express middleware functions
+
+Plain `async (req, res, next)` functions that perform DB lookups, ownership checks, or business logic that cannot be expressed as express-validator chains. These also live in `*-validators.js`.
+
+A common pattern is a **resolve-and-attach** middleware that looks up a resource, checks ownership, and attaches the instance to `req` for downstream handlers:
+
+```js
+const resolveCategoryMiddleware = async (req, res, next) => {
+    try {
+        const category = await categoryRepository.findCategoryById(req.params.id);
+        if (!category) return next(new NotFound('The requested category could not be found.'));
+        if (category.userId !== req.user.sub) return next(new PermissionDenied());
+        req.category = category;   // attach for downstream use
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+```
+
+**Placement rule:** async validator functions are placed *after* `handleBadRequests(...)` in the middleware array — they run only once field-level validation has passed:
+
+```js
+const updateCategoryMiddleware = [
+    nameFieldValidator,
+    handleBadRequests('Error occurred while updating category.'),
+    resolveCategoryMiddleware,   // DB lookup + ownership check — runs after field validation
+    categoryUniqueValidator,     // conflict check — runs last
+];
 ```
 
 ---
 
 ## Service Classes
 
-`src/services/` holds two kinds of modules, depending on the shape of the logic:
+`src/services/` holds two kinds of modules:
 
 ### 1. Class with `handle()` — third-party integrations
 
-Use this when the service calls a third-party API (payments, Spotify, SMS, etc.) and has one
-natural entry point.
-
-```jsx
+```js
 class MyIntegrationService {
     constructor(config) {
-        this.config = config;
-        this.client = axios.create({ baseURL: config.app.WEATHER_AI_BASE_URL });
+        this.client = axios.create({ baseURL: config.app.SOME_BASE_URL });
     }
 
     async handle(payload) {
         try {
-            const response = await this.client.post('/v1/current', payload);
+            const response = await this.client.post('/endpoint', payload);
             return response.data;
         } catch (error) {
             throw new BadRequest('Integration call failed.', { detail: error.message });
@@ -211,137 +297,131 @@ module.exports = { MyIntegrationService };
 
 ### 2. Plain function module — internal multi-operation logic
 
-Use this when the logic is internal (no external API call) and offers several related operations
-with no single `handle()` entry point — e.g. `src/services/token-service.js` signs/verifies access
-and refresh tokens. Export named functions instead of a class:
-
-```jsx
-const signAccessToken = ({ sub, email, role }) => { /* ... */ };
+```js
+const signAccessToken = ({ sub, email }) => { /* ... */ };
 const verifyAccessToken = (token) => { /* ... */ };
 
 module.exports = { signAccessToken, verifyAccessToken };
 ```
 
-Only reach for this pattern when a class + `handle()` would force unrelated operations behind one
-method name — default to the class pattern otherwise.
+Only use this pattern when a class + `handle()` would force unrelated operations behind one method name.
 
 ---
 
 ## Sequelize Models
 
-`src/models/<model>.js` defines the model directly with `sequelize.define(...)` and exports the
-resulting model — **not** the `module.exports = (sequelize, DataTypes) => {...}` factory pattern
-that `sequelize-cli` scaffolds by default.
+`src/models/<model>.js` defines the model directly with `sequelize.define(...)` — **not** the `module.exports = (sequelize, DataTypes) => {...}` factory pattern.
 
-```jsx
+```js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../configs/sequelize');
 
-const RefreshToken = sequelize.define('RefreshToken', {
+const Category = sequelize.define('Category', {
     id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
     },
-    jti: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-    },
     userId: {
         type: DataTypes.UUID,
-        allowNull: true,
-        references: { model: 'users', key: 'id' },
-        onDelete: 'SET NULL',
-    },
-    expiryDate: {
-        type: DataTypes.DATE,
         allowNull: false,
     },
+    name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+    },
+    type: {
+        type: DataTypes.ENUM('income', 'expense'),
+        allowNull: false,
+    },
+    isDefault: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
 }, {
-    tableName: 'refresh_tokens'
+    tableName: 'categories',
+    paranoid: true,
+    indexes: [
+        { name: 'idx_categories_userId', fields: ['userId'] },
+    ],
 });
 
-module.exports = { RefreshToken };
+module.exports = { Category };
 ```
 
-Instance methods (e.g. `User.prototype.isValidPassword`) and hooks (e.g. `beforeCreate` password
-hashing) are attached below the `sequelize.define(...)` call, in the same file.
+Instance methods and hooks are attached below the `sequelize.define(...)` call in the same file.
 
 ### Indexes
 
-All indexes are declared in the `indexes` array in the model options and **must include an explicit `name`**. Never rely on Sequelize's auto-generated index names — they are unpredictable and make migration rollbacks fragile.
+All indexes must be declared in the `indexes` array with an explicit `name`. Never rely on Sequelize's auto-generated names.
 
 Naming convention: `idx_<tableName>_<descriptor>`
 
-```jsx
-}, {
-    tableName: 'likes',
-    indexes: [
-        {
-            name: 'idx_likes_userId',
-            fields: ['userId']
-        },
-        {
-            name: 'idx_likes_entity',
-            fields: ['entityId', 'entityType']
-        },
-        {
-            name: 'unique_likes_userId_entityId_entityType',
-            unique: true,
-            fields: ['userId', 'entityId', 'entityType']
-        }
-    ]
-});
+Every index declared in the model must have a corresponding `addIndex` call in a dedicated migration. Foreign key columns must always be indexed.
+
+---
+
+## Sequelize Associations
+
+Declare associations in `src/models/associations.js` — never inside individual model files (circular dependencies). Require it once in `src/index.js` before routes are registered:
+
+```js
+require('./models/associations');
 ```
 
-Every index declared in the model must have a corresponding `addIndex` call in a dedicated migration (never added to the original `createTable` migration after it has already run). The `name` in the model and migration must be identical — this is what `removeIndex` targets during rollback.
+```js
+// associations.js
+const { Transaction } = require('./transaction');
+const { Category } = require('./category');
 
-Foreign key columns (`userId`, `entityId`, etc.) must always be indexed. Primary keys are indexed automatically by Postgres.
+Transaction.belongsTo(Category, { foreignKey: 'categoryId', as: 'category' });
+Category.hasMany(Transaction,   { foreignKey: 'categoryId', as: 'transactions' });
+```
+
+Use `hasMany`/`belongsTo` (not `belongsToMany`) when the relationship is direct (no junction table). Use `belongsToMany` only when a junction table with two FK columns represents the relationship.
+
+Eager-load with `include` when associated data is always needed in the response:
+
+```js
+Transaction.findByPk(id, {
+    include: [{ model: Category, as: 'category' }],
+});
+```
 
 ---
 
 ## Data Access — Repositories
 
-`src/repositories/<resource>-repository.js` is the only place allowed to import a Sequelize model
-and query it. Each file exports plain async functions (no class) named after the operation they
-perform, and returns model instances or plain values directly (no `ApiResponse` wrapping — that
-happens in the controller).
+`src/repositories/<resource>-repository.js` is the only place allowed to import a Sequelize model and query it. Each file exports plain async functions (no class).
 
-```jsx
-const { User } = require('../models/user');
+```js
+const { Category } = require('../models/category');
 
-const registerUser = async ({ email, password, role = 'USER' }) => {
-    return User.create({ email, password, role });
+const createCategory = async ({ userId, name, type }) => {
+    return Category.create({ userId, name, type });
 };
 
-const findUserByEmail = async (email) => {
-    return User.findOne({ where: { email } });
+const findCategoryById = async (id) => {
+    return Category.findByPk(id);
 };
 
-module.exports = { registerUser, findUserByEmail };
+module.exports = { createCategory, findCategoryById };
 ```
 
-Callers require the whole repository module as a namespace object and call functions off of it —
-never destructure individual functions out of a repository:
+**Always call through the namespace object — never destructure:**
 
-```jsx
-const userRepository = require('../../repositories/user-repository');
+```js
+const categoryRepository = require('../../repositories/category-repository');
 
-const user = await userRepository.findUserByEmail(value);
-const newUser = await userRepository.registerUser({ email, password });
+const category = await categoryRepository.findCategoryById(req.params.id);
 ```
-
-Validators (e.g. an "email already registered" custom validator) may call repository functions
-directly — they must not query models either.
 
 ---
 
 ## Database Transactions
 
-Use Sequelize's **managed transaction** pattern for any operation that must be atomic — where partial completion would leave data in an inconsistent state.
-
-### Managed transaction pattern
+Use Sequelize's **managed transaction** pattern for any operation that must be atomic.
 
 ```js
 const sequelize = require('../configs/sequelize');
@@ -352,109 +432,72 @@ await sequelize.transaction(async (t) => {
 });
 ```
 
-Sequelize automatically commits when the callback resolves and automatically rolls back when the callback throws. Never use the unmanaged pattern (manual `t.commit()` / `t.rollback()`) — it requires explicit try-catch and is error-prone.
+- **Pass `transaction: t` to every operation inside the callback.**
+- **Use `bulkCreate` over looping `create`.**
+- Never use the unmanaged pattern (manual `t.commit()` / `t.rollback()`).
 
-### Rules
-
-- **Pass `transaction: t` to every Sequelize operation inside the callback.** An operation without it runs on a separate DB connection outside the transaction — atomicity is broken.
-- **Use `bulkCreate` over looping `create`.** N individual `create` calls inside a transaction are N round-trips. `bulkCreate` collapses them into one `INSERT` statement regardless of row count.
-- **Require `sequelize` in the repository file** that needs transactions: `const sequelize = require('../configs/sequelize')`.
-
-### When to use transactions
-
-| Operation | Needs transaction? | Reason |
-| --- | --- | --- |
-| Delete existing records then insert a replacement set | Yes | If insert fails after delete, data is permanently lost |
-| Multi-step writes where any intermediate state is invalid | Yes | Atomicity — all succeed or none do |
-| Single `create` / `update` / `destroy` | No | Already atomic at the DB level |
-| Read-only queries | No | No state change |
-
-### ACID in practice
-
-- **Atomicity** — the entire callback succeeds or the database is unchanged
-- **Consistency** — FK constraints are still enforced within the transaction
-- **Isolation** — concurrent queries see either the old full state or the new full state, never a partial intermediate
-- **Durability** — committed changes survive a crash or restart
+| Operation | Needs transaction? |
+| --- | --- |
+| Delete then insert a replacement set | Yes |
+| Multi-step writes where any intermediate state is invalid | Yes |
+| Single `create` / `update` / `destroy` | No |
+| Read-only queries | No |
 
 ---
 
 ## API Response Serializers
 
-`src/utils/serializers/<resource>-serializer.js` transforms Sequelize model instances into
-plain objects safe for the API response. Serializers decouple the API contract from the
-internal model shape — field renames, type coercions, and field exclusions happen here and
-nowhere else.
+`src/utils/serializers/<resource>-serializer.js` transforms Sequelize model instances into plain API-safe objects.
 
-### Pattern
-
-Plain function module — not a class. Named exports, one per representation:
-
-```jsx
-const serializeUser = (user) => ({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    authMethod: user.googleSub ? 'google' : 'email',
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+```js
+const serializeCategory = (category) => ({
+    categoryId: category.id,
+    name: category.name,
+    type: category.type,
+    isDefault: category.isDefault,
+    createdAt: category.createdAt,
+    updatedAt: category.updatedAt,
 });
 
-const serializeAuthUser = (user) => ({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-});
+const serializeCategoryList = (categories) => categories.map(serializeCategory);
 
-module.exports = { serializeUser, serializeAuthUser };
+module.exports = { serializeCategory, serializeCategoryList };
 ```
 
 ### Naming convention
 
 | Function | Purpose |
 | --- | --- |
-| `serialize<Resource>` | Full detail — used in single-resource GET responses |
-| `serialize<Resource>Summary` | Condensed — used as individual items in list responses (add when needed) |
-| `serialize<Resource>List` | Maps an array through `serialize<Resource>Summary` (add alongside Summary) |
-| `serialize<Resource><Variant>` | Named contextual variants — e.g. `serializeAuthUser` for minimal auth token payloads |
+| `serialize<Resource>` | Full detail — used in single-resource GET/POST/PATCH responses |
+| `serialize<Resource>List` | Maps an array through `serialize<Resource>` |
+| `serialize<Resource><Variant>` | Named contextual variants (e.g. `serializeAuthUser` for minimal auth payloads) |
 
 ### Rules
 
-- **Never expose** internal columns: `password`, `googleSub`, `deletedAt`, or any hash/token field.
-- **Rename fields**: `id` → `<resource>Id` (e.g. `userId`); derive computed fields where appropriate (e.g. `authMethod` from `googleSub`).
+- **Never expose:** `passwordHash`, `deletedAt`, or any internal token/hash field.
+- **Rename:** `id` → `<resource>Id` (e.g. `categoryId`).
 - **Parse DECIMAL columns** to float with a null guard: `value !== null ? parseFloat(value) : null`.
-- **Controllers only** — serializers are called exclusively from controllers. Never call them from repositories, services, or middleware.
+- **Controllers only** — serializers are called exclusively from controllers.
 
-### Controller usage
+**Controller usage (namespace, not destructured):**
 
-Require the whole module as a namespace and call functions off it — do not destructure:
+```js
+const categorySerializer = require('../../utils/serializers/category-serializer');
 
-```jsx
-const userSerializer = require('../../utils/serializers/user-serializer');
-
-// Full profile response
-apiResponse.data = userSerializer.serializeUser(user);
-
-// Minimal shape for auth responses
-apiResponse.data = { ...userSerializer.serializeAuthUser(user), accessToken, refreshToken };
+apiResponse.data = categorySerializer.serializeCategory(category);
+apiResponse.data = categorySerializer.serializeCategoryList(categories);
 ```
 
 ---
 
 ## Authentication & Tokens
 
-- JWTs are signed with **RS256** using a private/public key pair loaded from disk by
-`utils/keys.js` (`loadPrivateKey`, `loadPublicKey`), paths configured via `JWT_PRIVATE_KEY_PATH` /
-`JWT_PUBLIC_KEY_PATH`.
-- The public key is exposed as a JWKS document (`utils/keys.js#buildJWKS`) so other services can
-verify tokens independently.
-- `src/services/token-service.js` is the only module that signs or verifies tokens
-(`signAccessToken`, `signRefreshToken`, `verifyAccessToken`, `verifyRefreshToken`). Every token gets
-a unique `jti` (`uuid`). Access tokens carry `sub`/`email`/`role` and are verified against
-`JWT_ISSUER`/`JWT_AUDIENCE`; refresh tokens only carry `sub`/`jti`.
-- JWT verification errors are normalized into `TokenExpired` / `InvalidJsonWebToken` (from
-`custom-exceptions.js`) rather than leaking the raw `jsonwebtoken` error names.
-- Passwords are hashed with `bcryptjs` in a Sequelize `beforeCreate` hook on the `User` model —
-never hash passwords in controllers, services, or repositories.
+- JWTs are signed with **RS256** using a private/public key pair loaded from disk by `utils/keys.js`, paths configured via `JWT_PRIVATE_KEY_PATH` / `JWT_PUBLIC_KEY_PATH`.
+- `src/services/token-service.js` is the **only** module that signs or verifies tokens (`signAccessToken`, `signRefreshToken`, `verifyAccessToken`, `verifyRefreshToken`, `isDenylisted`).
+- Access tokens carry `sub` and `email`; refresh tokens carry `sub`/`jti`.
+- JWT verification errors are normalized into `TokenExpired` / `InvalidJsonWebToken` — never leak raw `jsonwebtoken` error names.
+- Passwords are hashed with `bcryptjs` in a Sequelize `beforeCreate` hook on the `User` model — never in controllers, services, or repositories. The field is named `passwordHash` (not `password`).
+- The `isUserAuthenticated` middleware in `authorization-middlewares.js` verifies the Bearer token, checks the denylist via Redis, and attaches the decoded payload to `req.user`.
 
 ---
 
@@ -465,9 +508,9 @@ never hash passwords in controllers, services, or repositories.
 | Type | Tool | What it tests | DB / Redis |
 | --- | --- | --- | --- |
 | **Integration** | Supertest + Jest | Full HTTP request → middleware → controller → DB → serialized response | Real Postgres test DB, real Redis |
-| **Unit** | Jest | A single service, utility, or validator in isolation | Mocked |
+| **Unit** | Jest | A single service or utility in isolation | Mocked |
 
-Default to integration tests for anything that has an HTTP endpoint. Reach for unit tests only when testing a utility module (e.g. `pkceService`, a serializer) directly without HTTP overhead.
+Default to integration tests for anything that has an HTTP endpoint.
 
 ---
 
@@ -477,15 +520,24 @@ Default to integration tests for anything that has an HTTP endpoint. Reach for u
 src/tests/
   setup.js                              # globalSetup — creates test DB, runs migrations
   teardown.js                           # globalTeardown — drops test DB
-  setupFilesAfterEnv.js                 # runs before each test file — mocks, app ref, cleanup
-  refresh-token-controller.test.js
-  logout-controller.test.js
-  jwks-controller.test.js
-  oauthentication-controllers.js.test.js
-  ...
+  setupFilesAfterEnv.js                 # afterAll — closes sequelize and redis connections
+  authentication/
+    basic-login-controller.test.js
+    basic-registration-controller.test.js
+    logout-controller.test.js
+    refresh-token-controller.test.js
+  categories/
+    create-category-controller.test.js
+    list-categories-controller.test.js
+    patch-category-controller.test.js
+    delete-category-controller.test.js
+  transactions/
+    ...
 ```
 
-Test files live flat in `src/tests/` (not in resource subdirectories). Naming convention: `<action>-<resource>-controller.test.js`.
+Test files are **grouped by resource in subdirectories**. Naming: `<action>-<resource>-controller.test.js`.
+
+`describe` block: `describe('<METHOD> /v1/<resource>', () => { ... })` — e.g. `describe('POST /v1/categories', () => { ... })`.
 
 ---
 
@@ -503,12 +555,6 @@ Test files live flat in `src/tests/` (not in resource subdirectories). Naming co
 }
 ```
 
-| Key | Role |
-| --- | --- |
-| `globalSetup` | Runs once in a separate process before all test files. Creates the test DB and runs migrations. Has no access to `jest` globals. |
-| `globalTeardown` | Runs once after all test files. Closes DB connections and drops the test DB. |
-| `setupFilesAfterEnv` | Runs before each test file in the same Jest worker. Registers mocks and schedules connection cleanup. |
-
 #### `setup.js`
 
 Creates `POSTGRES_DATABASE_TEST` if it does not exist, then runs pending migrations:
@@ -517,115 +563,127 @@ Creates `POSTGRES_DATABASE_TEST` if it does not exist, then runs pending migrati
 await execPromise('NODE_ENV=test npx sequelize-cli db:migrate');
 ```
 
-`NODE_ENV=test` is mandatory — without it, the CLI reads `config.development` and migrates the wrong database.
+`NODE_ENV=test` is mandatory — without it the CLI migrates the wrong database.
 
 #### `teardown.js`
 
-Calls `pg_terminate_backend` before `DROP DATABASE`. Without this, Postgres refuses to drop a database with active connections.
+Calls `pg_terminate_backend` before `DROP DATABASE` to avoid "database is being accessed by other users" errors.
+
+#### `setupFilesAfterEnv.js`
+
+Closes sequelize and redis connections after each test file to prevent Jest open-handle warnings. No mocks are registered here — mock at the top of individual test files when needed.
 
 ---
 
 ### Mocking strategy
 
-The auth-service uses real RS256 key pairs — `tokenService.signAccessToken` and `signRefreshToken` produce genuine RS256 JWTs in tests. Do not mock `token-service.js` globally.
+Token service is **not** mocked. Tests sign real RS256 JWTs using `tokenService.signAccessToken` and `signRefreshToken`.
 
 What IS mocked:
 
 | Module | Why mocked |
 | --- | --- |
-| `GoogleOAuthService.prototype.handle` | Calls real Google token endpoints. Mock per-test with `jest.spyOn` in `beforeEach`, restore in `afterEach`. |
+| External OAuth service calls | Calls real third-party endpoints — mock per-test with `jest.spyOn` |
 
-`jest.mock` factory functions cannot reference outer-scope variables (Babel hoisting). Always `require` inside the factory:
-
-```js
-jest.mock('../services/some-service', () => ({
-    method: jest.fn(() => {
-        const dep = require('./dep');   // ✓ require inside factory
-        return dep.something();
-    }),
-}));
-```
+`jest.mock` factory functions cannot reference outer-scope variables (Babel hoisting). Always `require` inside the factory.
 
 ---
 
-### Token patterns
+### User creation in tests
 
-**Access token for `Authorization` header:**
+Tests create real `User` rows using `faker` for dynamic, collision-free data. The `passwordHash` field accepts any string when creating test users directly (the `beforeCreate` hook hashes whatever is passed, so use a plain string like `'irrelevant'`):
 
 ```js
-const { token: accessToken } = tokenService.signAccessToken({
-    sub: TEST_USER_ID,
-    email: 'user@test.local',
-    role: 'USER',
+const { faker } = require('@faker-js/faker');
+
+user = await User.create({
+    id: faker.string.uuid(),
+    name: faker.person.fullName(),
+    email: faker.internet.email(),
+    passwordHash: 'irrelevant',
 });
+```
+
+Sign an access token for the created user:
+
+```js
+const tokenService = require('../../services/token-service');
+
+({ token: accessToken } = tokenService.signAccessToken({
+    sub: user.id,
+    email: user.email,
+}));
 // Use as: `Authorization: Bearer ${accessToken}`
 ```
-
-**Refresh token cookie from a login response:**
-
-```js
-const loginRes = await request(app).post('/v1/auth/login').send(credentials);
-const rawCookie = loginRes.headers['set-cookie'][0];
-const cookieHeader = rawCookie.split(';')[0];   // 'refresh_token=eyJ...'
-// Use as: `.set('Cookie', cookieHeader)`
-```
-
-**Expired token:**
-
-```js
-const expiredToken = jwt.sign(
-    { sub: TEST_USER_ID, jti: 'some-jti' },
-    loadPrivateKey(),
-    { algorithm: 'RS256', expiresIn: -1 }
-);
-```
-
-**Orphaned token (valid JWT, no DB record):**
-
-```js
-const { token: orphanedToken } = tokenService.signRefreshToken({ sub: TEST_USER_ID });
-// Never stored in DB — triggers TokenReuseDetected when sent
-```
-
-**Token reuse ordering:** `revokeAllUserSessions(userId)` deletes ALL refresh tokens for a user. The token-reuse test must run AFTER the success test in the same file, or use an orphaned token to avoid invalidating the valid session.
 
 ---
 
 ### Test case structure
 
-Every endpoint test file follows this layered structure, matching the middleware chain top-to-bottom:
+Every endpoint test file follows this layered structure:
 
 ```
-describe('<Resource> API - POST /v1/auth/<path>', () => {
+describe('<METHOD> /v1/<resource>', () => {
+
+    let user;
+    let accessToken;
 
     beforeAll(async () => {
-        // Create DB records, sign tokens
+        // Create User with faker, sign token
     });
 
     afterAll(async () => {
-        // Clean up: delete RefreshToken records before User records
-        // (userId FK is SET NULL on delete — clean in dependency order)
+        // Hard-delete in dependency order (child records before parent)
+        // paranoid models require { force: true }
     });
 
-    describe('Authentication', () => {
-        // Missing header → 401
-        // Malformed header → 401
-        // Expired token → 401
-        // Denylisted token → 401
-    });
+    // 1. Authentication
+    it('should return 401 when no Authorization header is provided', ...);
 
-    describe('Validation', () => {
-        // Missing required fields → 400
-        // Invalid field values → 400
-    });
+    // 2. Validation — one test per field constraint
+    it('should return 400 when <field> is missing', ...);
+    it('should return 400 when <field> is <invalid>', ...);
 
-    describe('Success', () => {
-        // Happy path — assert full response shape and DB side effects
-    });
+    // 3. Resource resolution / ownership
+    it('should return 404 when the resource does not exist', ...);
+    it('should return 403 when the resource belongs to a different user', ...);
 
-    describe('Error propagation', () => {
-        // Direct controller call with broken req → next(error) called
-    });
+    // 4. Business logic (Conflict, UnprocessedEntity)
+    it('should return 409 when a duplicate already exists', ...);
+
+    // 5. Success
+    it('should return 201 with the created resource', ...);
+
+    // 6. Error propagation
+    it('should call next() with an error if any exception is thrown', ...);
+});
+```
+
+#### Success test — assert the serialized shape
+
+```js
+expect(res.status).toBe(201);
+expect(res.body).toHaveProperty('status', 'success');
+expect(res.body).toHaveProperty('message', 'Category created successfully.');
+expect(res.body.data).toMatchObject({
+    name: 'Side Projects',
+    type: 'income',
+    isDefault: false,
+});
+expect(res.body.data).toHaveProperty('categoryId');
+expect(res.body.data).not.toHaveProperty('id');          // raw column not exposed
+expect(res.body.data).not.toHaveProperty('deletedAt');   // paranoid field not exposed
+```
+
+#### Error propagation pattern
+
+```js
+it('should call next() with an error if any exception is thrown', async () => {
+    req = {};
+    res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    next = jest.fn();
+    await createCategoryController(req, res, next);
+    expect(next).toHaveBeenCalled();
 });
 ```
 
@@ -633,10 +691,9 @@ describe('<Resource> API - POST /v1/auth/<path>', () => {
 
 ### Determinism and isolation
 
-- **Clean up in dependency order.** `RefreshToken.userId` has `onDelete: 'SET NULL'` — delete `RefreshToken` records before the `User` they reference, or the FK becomes null rather than deleted cleanly.
-- **Use `{ force: true }` for paranoid models** — `User` has `paranoid: true`. Without `force: true`, `destroy` sets `deletedAt` but leaves the row, causing conflicts in the next test run.
-- **Scope cleanup by a constant ID.** Use predictable UUID constants for `userId` values in tests and delete by that ID in `afterAll`. Never `truncate`.
-- **Order success before reuse-detection tests.** The token-reuse path calls `revokeAllUserSessions`, which deletes all tokens for that user. Any test that needs a valid session must run before the reuse test.
+- **Clean up in dependency order.** Delete child records (e.g. `Transaction`) before parent records (`User`, `Category`).
+- **`{ force: true }` for paranoid models.** `User` and `Category` have `paranoid: true`. Without `force: true`, `destroy` sets `deletedAt` but leaves the row — causing conflicts in the next run.
+- **Scope cleanup by `userId`.** Use the `user.id` created in `beforeAll` to scope all `destroy()` calls. Never `truncate`.
 
 ---
 
@@ -646,9 +703,11 @@ Every endpoint test file must cover all layers of the middleware chain:
 
 | Layer | Minimum tests |
 | --- | --- |
-| Authentication | Missing header, malformed header, expired token |
+| Authentication | Missing Authorization header |
 | Validation | Missing + at least one invalid value per validated field |
-| Success | One happy-path test asserting full response shape and DB side effects |
+| Resource resolution | 404 when not found; 403 when wrong owner |
+| Business logic | At least one Conflict or UnprocessedEntity case (where applicable) |
+| Success | One happy-path test asserting full serialized response shape |
 | Error propagation | One direct controller call with empty `req` |
 
 ---
@@ -660,13 +719,13 @@ Every endpoint test file must cover all layers of the middleware chain:
 npm test
 
 # Run a single test file
-npm test -- --testPathPattern=refresh-token
+npm test -- --testPathPattern=categories/create
 
 # Run with verbose output
 npm test -- --verbose
 
 # Run a single named test
-npm test -- --testNamePattern="should return 401"
+npm test -- --testNamePattern="should return 201"
 ```
 
 ---
@@ -676,8 +735,7 @@ npm test -- --testNamePattern="should return 401"
 - Follow **Conventional Commits**: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`.
 - Keep commits small and focused on a single concern.
 - Run `npm test` locally and confirm all tests pass before opening a PR.
-- PR descriptions must include: what changed, why it changed, and any migration or environment
-variable additions required.
+- PR descriptions must include: what changed, why it changed, and any migration or environment variable additions required.
 - Never force-push to `main`.
 
 ---
@@ -709,10 +767,13 @@ npx sequelize-cli migration:generate --name <description>
 - Call `next(error)` and also send a response in the same branch — pick one.
 - Use `res.send()` for JSON APIs — always use `res.status(code).json(apiResponse)`.
 - Use `process.env` directly in controllers or services — read from `configs/config.js`.
-- Skip `handleValidationErrors()` in a middleware array that contains `express-validator` chains.
+- Skip `handleBadRequests()` in a middleware array that contains `express-validator` chains.
 - Catch errors silently (`catch (e) {}`) — always propagate via `next(error)` or rethrow.
 - Import or query a Sequelize model (`src/models/`) from anywhere other than a `src/repositories/*-repository.js` file.
-- Destructure functions out of a repository import (`const { findUserByEmail } = require(...)`) — always call through the namespace object (`userRepository.findUserByEmail(...)`).
-- Define a Sequelize model using the `module.exports = (sequelize, DataTypes) => {...}` factory pattern — use `sequelize.define(...)` directly, as in `src/models/user.js` / `src/models/refresh-token.js`.
+- Destructure functions out of a repository import — always call through the namespace object (`categoryRepository.findCategoryById(...)`).
+- Define a Sequelize model using the `module.exports = (sequelize, DataTypes) => {...}` factory pattern — use `sequelize.define(...)` directly.
 - Sign or verify a JWT anywhere other than `src/services/token-service.js`.
-- Call a serializer from anywhere other than a controller — serializers live in `src/utils/serializers/` and must only be invoked inside `src/app/controllers/`.
+- Call a serializer from anywhere other than a controller.
+- Declare Sequelize associations inside individual model files — use `src/models/associations.js`.
+- Wire `isUserAuthenticated` into individual route middleware arrays — it is a global middleware mounted at the app level in `index.js`.
+- Hash passwords in controllers, services, or repositories — the `beforeCreate` hook on `User` handles this automatically.
