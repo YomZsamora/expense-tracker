@@ -7,6 +7,7 @@ const { User } = require('../../models/user');
 const { Category } = require('../../models/category');
 const { Transaction } = require('../../models/transaction');
 const tokenService = require('../../services/token-service');
+const { updateCategoryController } = require('../../app/controllers/category-controller');
 
 describe('PATCH /v1/categories/:id', () => {
 
@@ -116,5 +117,16 @@ describe('PATCH /v1/categories/:id', () => {
             name: 'Updated Custom Category',
             type: 'expense',
         });
+    });
+
+    it('should call next() with an error if any exception is thrown', async () => {
+        req = {};
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(),
+        };
+        next = jest.fn();
+        await updateCategoryController(req, res, next);
+        expect(next).toHaveBeenCalled();
     });
 });
