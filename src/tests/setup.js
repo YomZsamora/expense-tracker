@@ -15,13 +15,15 @@ module.exports = async () => {
 
     try {
         await adminSequelize.authenticate();
-        const [results] = await adminSequelize.query(`SELECT 1 FROM pg_database WHERE datname = '${test.database}'`);
-        if (results.length === 0) {
-            await adminSequelize.query(`CREATE DATABASE "${test.database}"`);
-            console.log(`Test database "${test.database}" created.`);
-        } else {
-            console.log(`Test database "${test.database}" already exists. Skipping creation.`);
-        }
+        await adminSequelize.query(`
+            SELECT pg_terminate_backend(pg_stat_activity.pid)
+            FROM pg_stat_activity
+            WHERE pg_stat_activity.datname = '${test.database}'
+            AND pid <> pg_backend_pid()
+        `);
+        await adminSequelize.query(`DROP DATABASE IF EXISTS "${test.database}"`);
+        await adminSequelize.query(`CREATE DATABASE "${test.database}"`);
+        console.log(`Test database "${test.database}" created.`);
     } catch (error) {
         console.error('Error during test database setup:', error);
         throw error;
