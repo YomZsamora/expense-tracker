@@ -48,4 +48,24 @@ const getTransactionController = async (req, res, next) => {
     }
 };
 
-module.exports = { createTransactionController, getTransactionController };
+const updateTransactionController = async (req, res, next) => {
+    try {
+        const { amount, type, categoryId, date, description } = req.body;
+        const updateData = {};
+        if (amount !== undefined) updateData.amount = amount;
+        if (type !== undefined) updateData.type = type;
+        if (categoryId !== undefined) updateData.categoryId = categoryId;
+        if (date !== undefined) updateData.date = date;
+        if (description !== undefined) updateData.description = description;
+        await transactionRepository.updateTransaction(req.transaction.id, updateData);
+        const updated = await transactionRepository.findTransactionById(req.transaction.id);
+        const apiResponse = new ApiResponse();
+        apiResponse.message = 'Transaction updated successfully.';
+        apiResponse.data = transactionSerializer.serializeTransaction(updated);
+        return res.status(200).json(apiResponse);
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { createTransactionController, getTransactionController, updateTransactionController };
