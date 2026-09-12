@@ -8,7 +8,6 @@ const {
     Conflict,
     NotAuthenticated,
     PermissionDenied,
-    UnprocessedEntity,
     TokenExpired,
     InvalidJsonWebToken,
     TokenReuseDetected,
@@ -47,11 +46,6 @@ const exceptionHandler = (err, req, res, _next) => {
         apiResponse.message = err.message;
     }
 
-    if (err instanceof UnprocessedEntity) {
-        statusCode = err.statusCode;
-        apiResponse.message = err.message;
-    }
-
     if (err instanceof TokenExpired) {
         statusCode = err.statusCode;
         apiResponse.message = err.message;
@@ -76,10 +70,6 @@ const formatExceptions = (errors) => {
     );
 };
 
-const formatLoggerExceptions = (errors) => {
-    return errors && typeof errors === 'object' ? Object.values(errors).join(', ') : errors;
-};
-
 const handleBadRequests = (errorMessage = 'Validation failed.') => {
     return (req, res, next) => {
         const errors = validationResult(req);
@@ -90,20 +80,8 @@ const handleBadRequests = (errorMessage = 'Validation failed.') => {
     };
 };
 
-const handleNotFoundErrors = (errorMessage = 'Resource not found.') => {
-    return (req, res, next) => {
-        const resource = req.resource;
-        if (!resource) {
-            throw new NotFound(errorMessage);
-        }
-        next();
-    };
-};
-
 module.exports = {
     exceptionHandler,
     formatExceptions,
-    formatLoggerExceptions,
     handleBadRequests,
-    handleNotFoundErrors,
 };
