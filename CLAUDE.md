@@ -659,6 +659,26 @@ describe('<METHOD> /v1/<resource>', () => {
 });
 ```
 
+#### Validation error tests — assert message and field value
+
+Every 400 test must assert both the top-level `message` (the string passed to `handleBadRequests`) and the specific field error string in `data`:
+
+```js
+expect(res.status).toBe(400);
+expect(res.body).toHaveProperty('status', 'error');
+expect(res.body).toHaveProperty('message', 'Error occurred while creating category.');
+expect(res.body.data).toHaveProperty('name', 'Name is required.');
+```
+
+For 400 errors produced by async middleware (e.g. `new BadRequest('Validation failed.', { ... })`), assert the message that the middleware passes to `BadRequest`:
+
+```js
+expect(res.body).toHaveProperty('message', 'Validation failed.');
+expect(res.body.data).toHaveProperty('categoryId', 'Category not found.');
+```
+
+Never assert only `.toHaveProperty('fieldName')` without a value — always pin the exact error string so a changed message fails the test.
+
 #### Success test — assert the serialized shape
 
 ```js
