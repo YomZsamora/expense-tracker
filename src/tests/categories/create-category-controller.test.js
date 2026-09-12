@@ -4,7 +4,9 @@ const request = require('supertest');
 const app = require('../../index');
 const { User } = require('../../models/user');
 const { Category } = require('../../models/category');
+const { Transaction } = require('../../models/transaction');
 const tokenService = require('../../services/token-service');
+const { faker } = require('@faker-js/faker');
 
 describe('POST /v1/categories', () => {
 
@@ -14,7 +16,12 @@ describe('POST /v1/categories', () => {
 
     beforeAll(async () => {
         categoryToAdd = { name: 'Side Projects', type: 'income' };
-        user = await User.findOne({ where: { email: 'test.user@example.com' }});
+        user = await User.create({
+            id: faker.string.uuid(),
+            name: faker.person.fullName(),
+            email: faker.internet.email(),
+            passwordHash: 'irrelevant',
+        });
         ({ token: accessToken } = tokenService.signAccessToken({
             sub: user.id,
             email: user.email,
@@ -22,6 +29,7 @@ describe('POST /v1/categories', () => {
     });
 
     afterAll(async () => {
+        await Transaction.destroy({ where: { userId: user.id }, force: true });
         await Category.destroy({ where: { userId: user.id }, force: true });
     });
 
