@@ -7,6 +7,7 @@ const { Category } = require('../../models/category');
 const { Transaction } = require('../../models/transaction');
 const tokenService = require('../../services/token-service');
 const { faker } = require('@faker-js/faker');
+const { createCategoryController } = require('../../app/controllers/category-controller');
 
 describe('POST /v1/categories', () => {
 
@@ -125,5 +126,16 @@ describe('POST /v1/categories', () => {
         expect(res.status).toBe(409);
         expect(res.body).toHaveProperty('status', 'error');
         expect(res.body).toHaveProperty('message', `A ${categoryToAdd.type} category named "${categoryToAdd.name}" already exists.`);
+    });
+
+    it('should call next() with an error if any exception is thrown', async () => {
+        req = {};
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(),
+        };
+        next = jest.fn();
+        await createCategoryController(req, res, next);
+        expect(next).toHaveBeenCalled();
     });
 });
