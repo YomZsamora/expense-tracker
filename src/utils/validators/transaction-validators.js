@@ -31,25 +31,17 @@ const descriptionFieldValidator = body('description')
     .optional()
     .isLength({ max: 500 }).withMessage('Description cannot exceed 500 characters.');
 
-// Resolves category by categoryId, checks ownership, and checks type match.
-// Must run after handleBadRequests so categoryId is guaranteed to be a valid UUID.
 const resolveCategoryForTransaction = async (req, res, next) => {
     try {
         const { categoryId, type } = req.body;
         const category = await categoryRepository.findCategoryById(categoryId);
-
-        if (!category) {
-            return next(new BadRequest('Validation failed.', { categoryId: 'Category not found.' }));
-        }
-        if (category.userId !== req.user.sub) {
-            return next(new BadRequest('Validation failed.', { categoryId: 'Category does not belong to you.' }));
-        }
+        if (!category) return next(new BadRequest('Validation failed.', { categoryId: 'Category not found.' }));
+        if (category.userId !== req.user.sub) return next(new BadRequest('Validation failed.', { categoryId: 'Category does not belong to you.' }));
         if (category.type !== type) {
             return next(new BadRequest('Validation failed.', {
                 type: `Transaction type must match the category type (${category.type}).`,
             }));
         }
-
         req.resolvedCategory = category;
         next();
     } catch (error) {
@@ -57,8 +49,6 @@ const resolveCategoryForTransaction = async (req, res, next) => {
     }
 };
 
-// Resolves transaction by :id, checks ownership, attaches req.transaction.
-// Includes category join so the controller can serialize without a second fetch.
 const resolveTransactionMiddleware = async (req, res, next) => {
     try {
         const transaction = await transactionRepository.findTransactionById(req.params.id);
