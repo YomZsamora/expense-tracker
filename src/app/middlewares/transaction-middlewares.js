@@ -9,6 +9,11 @@ const {
     descriptionFieldValidator,
     resolveCategoryForTransaction,
     resolveTransactionMiddleware,
+    amountFieldOptionalValidator,
+    typeFieldOptionalValidator,
+    categoryIdFieldOptionalValidator,
+    dateFieldOptionalValidator,
+    resolveCategoryForTransactionUpdate,
 } = require('../../utils/validators/transaction-validators');
 
 /** * Creates a new transaction.
@@ -37,4 +42,15 @@ const getTransactionMiddleware = [
     resolveTransactionMiddleware,
 ];
 
-module.exports = { createTransactionMiddleware, getTransactionMiddleware };
+const updateTransactionMiddleware = [
+    amountFieldOptionalValidator,
+    typeFieldOptionalValidator,
+    categoryIdFieldOptionalValidator,
+    dateFieldOptionalValidator,
+    descriptionFieldValidator,
+    handleBadRequests('Error occurred while updating transaction.'),
+    resolveTransactionMiddleware,
+    resolveCategoryForTransactionUpdate,
+];
+
+module.exports = { createTransactionMiddleware, getTransactionMiddleware, updateTransactionMiddleware };
