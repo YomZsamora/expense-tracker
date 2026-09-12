@@ -478,11 +478,28 @@ describe('<METHOD> /v1/<resource>', () => {
 });
 ```
 
+#### Validation error assertion pattern
+
+Every 400 test must assert both the top-level `message` (the string passed to `handleBadRequests`) and the exact field error string in `data`. Never assert only `.toHaveProperty('fieldName')` without a value.
+
+```js
+// express-validator 400s — message comes from handleBadRequests(...)
+expect(res.status).toBe(400);
+expect(res.body).toHaveProperty('status', 'error');
+expect(res.body).toHaveProperty('message', 'Error occurred while creating category.');
+expect(res.body.data).toHaveProperty('name', 'Name is required.');
+
+// async-middleware 400s — message comes from new BadRequest('Validation failed.', { ... })
+expect(res.body).toHaveProperty('message', 'Validation failed.');
+expect(res.body.data).toHaveProperty('categoryId', 'Category not found.');
+```
+
 #### Success assertion pattern
 
 ```js
 expect(res.status).toBe(201);
 expect(res.body).toHaveProperty('status', 'success');
+expect(res.body).toHaveProperty('message', 'Category created successfully.');
 expect(res.body.data).toMatchObject({ name: 'Side Projects', type: 'income', isDefault: false });
 expect(res.body.data).toHaveProperty('categoryId');
 expect(res.body.data).not.toHaveProperty('id');        // raw column not exposed
