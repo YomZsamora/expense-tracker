@@ -41,14 +41,6 @@ class PermissionDenied extends Error {
     }
 }
 
-class UnprocessedEntity extends Error {
-    constructor() {
-        super('The request could not be processed. Please try again later.');
-        this.statusCode = 422;
-        this.name = 'UnprocessedEntity';
-    }
-}
-
 class TokenExpired extends Error {
     constructor() {
         super('Token has expired.');
@@ -79,7 +71,6 @@ module.exports = {
     Conflict,
     NotAuthenticated,
     PermissionDenied,
-    UnprocessedEntity,
     TokenExpired,
     InvalidJsonWebToken,
     TokenReuseDetected,
