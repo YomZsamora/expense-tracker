@@ -7,6 +7,7 @@ const { User } = require('../../models/user');
 const { Category } = require('../../models/category');
 const { Transaction } = require('../../models/transaction');
 const tokenService = require('../../services/token-service');
+const { deleteCategoryController } = require('../../app/controllers/category-controller');
 
 describe('DELETE /v1/categories/:id', () => {
     
@@ -120,5 +121,16 @@ describe('DELETE /v1/categories/:id', () => {
             .set('Authorization', `Bearer ${accessToken}`);
         const ids = listRes.body.data.map((c) => c.categoryId);
         expect(ids).not.toContain(fresh.id);
+    });
+
+    it('should call next() with an error if any exception is thrown', async () => {
+        req = {};
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn(),
+        };
+        next = jest.fn();
+        await deleteCategoryController(req, res, next);
+        expect(next).toHaveBeenCalled();
     });
 });
