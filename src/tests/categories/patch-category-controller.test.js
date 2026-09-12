@@ -2,8 +2,10 @@
 
 const request = require('supertest');
 const app = require('../../index');
+const { faker } = require('@faker-js/faker');
 const { User } = require('../../models/user');
 const { Category } = require('../../models/category');
+const { Transaction } = require('../../models/transaction');
 const tokenService = require('../../services/token-service');
 
 describe('PATCH /v1/categories/:id', () => {
@@ -13,7 +15,12 @@ describe('PATCH /v1/categories/:id', () => {
     let customCategory;
 
     beforeAll(async () => {
-        user = await User.findOne({ where: { email: 'test.user@example.com' }});
+        user = await User.create({
+            id: faker.string.uuid(),
+            name: faker.person.fullName(),
+            email: faker.internet.email(),
+            passwordHash: 'irrelevant',
+        });
         ({ token: accessToken } = tokenService.signAccessToken({
             sub: user.id,
             email: user.email,
@@ -27,6 +34,7 @@ describe('PATCH /v1/categories/:id', () => {
     });
 
     afterAll(async () => {
+        await Transaction.destroy({ where: { userId: user.id }, force: true });
         await Category.destroy({ where: { userId: user.id }, force: true });
     });
     
