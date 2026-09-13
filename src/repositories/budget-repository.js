@@ -36,10 +36,15 @@ const findUserBudgets = async (userId, { month, year } = {}) => {
     });
 };
 
+const deleteBudget = async (id) => {
+    return Budget.destroy({ where: { id } });
+};
+
 module.exports = {
     createBudget,
     findBudgetById,
     findBudgetByUserCategoryMonthYear,
     updateBudget,
+    deleteBudget,
     findUserBudgets,
 };
