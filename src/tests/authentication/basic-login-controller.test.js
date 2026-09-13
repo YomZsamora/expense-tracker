@@ -2,11 +2,12 @@
 
 const request = require('supertest');
 const app = require('../../index');
+const { faker } = require('@faker-js/faker');
 const { User } = require('../../models/user');
 const { RefreshToken } = require('../../models/refresh-token');
 const { basicLoginController } = require('../../app/controllers/authentication-controllers.js');
 
-const TEST_EMAIL = 'logintest@test.local';
+const TEST_EMAIL = faker.internet.email();
 const TEST_PASSWORD = 'TestLogin@1';
 
 describe('Basic Login API - POST /v1/auth/login', () => {
