@@ -38,4 +38,13 @@ const updateBudgetController = async (req, res, next) => {
     }
 };
 
-module.exports = { createBudgetController, updateBudgetController };
+const deleteBudgetController = async (req, res, next) => {
+    try {
+        await budgetRepository.deleteBudget(req.budget.id);
+        return res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { createBudgetController, updateBudgetController, deleteBudgetController };
