@@ -1,6 +1,6 @@
 'use strict';
 
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 const { BadRequest, NotFound, PermissionDenied } = require('../exceptions/custom-exceptions');
 const categoryRepository = require('../../repositories/category-repository');
 const transactionRepository = require('../../repositories/transaction-repository');
@@ -105,6 +105,37 @@ const resolveCategoryForTransactionUpdate = async (req, res, next) => {
     }
 };
 
+const listTransactionsQueryValidator = [
+    query('type')
+        .optional()
+        .isIn(['income', 'expense']).withMessage('Type must be income or expense.'),
+    query('categoryId')
+        .optional()
+        .isUUID().withMessage('Category ID must be a valid UUID.'),
+    query('startDate')
+        .optional()
+        .isISO8601({ strict: true }).withMessage('Start date must be a valid YYYY-MM-DD date.'),
+    query('endDate')
+        .optional()
+        .isISO8601({ strict: true }).withMessage('End date must be a valid YYYY-MM-DD date.'),
+    query('search')
+        .optional()
+        .isLength({ max: 100 }).withMessage('Search term cannot exceed 100 characters.'),
+    query('page')
+        .optional()
+        .isInt({ min: 1 }).withMessage('Page must be a positive integer.'),
+    query('limit')
+        .optional()
+        .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100.'),
+    query('sortBy')
+        .optional()
+        .isIn(['date', 'amount', 'createdAt']).withMessage('Sort field must be date, amount, or createdAt.'),
+    query('sortOrder')
+        .optional()
+        .isIn(['ASC', 'asc', 'DESC', 'desc']).withMessage('Sort order must be ASC or DESC.'),
+];
+
+
 module.exports = {
     amountFieldValidator,
     typeFieldValidator,
@@ -118,4 +149,5 @@ module.exports = {
     categoryIdFieldOptionalValidator,
     dateFieldOptionalValidator,
     resolveCategoryForTransactionUpdate,
+    listTransactionsQueryValidator,
 };
