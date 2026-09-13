@@ -17,6 +17,14 @@ const findBudgetByUserCategoryMonthYear = async (userId, categoryId, month, year
     return Budget.findOne({ where: { userId, categoryId, month, year } });
 };
 
+const updateBudget = async (id, amount) => {
+    const [, [updated]] = await Budget.update({ amount }, {
+        where: { id },
+        returning: true,
+    });
+    return updated;
+};
+
 const findUserBudgets = async (userId, { month, year } = {}) => {
     const where = { userId };
     if (month !== undefined) where.month = month;
@@ -32,5 +40,6 @@ module.exports = {
     createBudget,
     findBudgetById,
     findBudgetByUserCategoryMonthYear,
+    updateBudget,
     findUserBudgets,
 };
