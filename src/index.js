@@ -10,6 +10,7 @@ const userRoutes = require('./app/routes/user-routes');
 const categoryRoutes = require('./app/routes/category-routes');
 const transactionRoutes = require('./app/routes/transaction-routes');
 const budgetRoutes = require('./app/routes/budget-routes');
+const summaryRoutes = require('./app/routes/summary-routes');
 const { exceptionHandler } = require('./utils/exceptions/exception-handler');
 const { isUserAuthenticated } = require('./app/middlewares/authorization-middlewares');
 
@@ -36,10 +37,12 @@ app.use('/v1/users/', userRoutes);
 app.use('/v1/categories/', categoryRoutes);
 app.use('/v1/transactions/', transactionRoutes);
 app.use('/v1/budgets/', budgetRoutes);
+app.use('/v1/summary/', summaryRoutes);
 
 // Exception handler
 app.use(exceptionHandler);
 
+// Start the server if this file is run directly
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
