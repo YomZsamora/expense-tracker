@@ -23,39 +23,15 @@ const findTransactionById = async (id) => {
     });
 };
 
-const findUserTransactions = async (userId, {
-    type,
-    categoryId,
-    startDate,
-    endDate,
-    search,
-    page = 1,
-    limit = 10
-}) => {
-    const where = { userId };
-    if (type) where.type = type;
-    if (categoryId) where.categoryId = categoryId;
-    if (search) where.description = { [Op.iLike]: `%${search}%` };
-
-    if (startDate || endDate) {
-        where.date = {};
-        if (startDate) where.date[Op.gte] = startDate;
-        if (endDate)   where.date[Op.lte] = endDate;
-    }
-
-    const offset = (page - 1) * limit;
+const findUserTransactions = async (userId, { where = {}, limit, offset, sortBy, sortOrder }) => {
     const { count, rows } = await Transaction.findAndCountAll({
-        where,
+        where: { ...where, userId },
         include: [{ model: Category, as: 'category', attributes: ['id', 'name', 'type'] }],
-        order:  [['date', 'DESC']],
+        order: [[sortBy, sortOrder]],
         limit,
         offset,
     });
-
-    return {
-        transactions: rows,
-        pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) },
-    };
+    return { transactions: rows, total: count };
 };
 
 const updateTransaction = async (id, updateData) => {
