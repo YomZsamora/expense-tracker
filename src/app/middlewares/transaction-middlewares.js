@@ -53,4 +53,8 @@ const updateTransactionMiddleware = [
     resolveCategoryForTransactionUpdate,
 ];
 
-module.exports = { createTransactionMiddleware, getTransactionMiddleware, updateTransactionMiddleware };
+const deleteTransactionMiddleware = [
+    resolveTransactionMiddleware,
+];
+
+module.exports = { createTransactionMiddleware, getTransactionMiddleware, updateTransactionMiddleware, deleteTransactionMiddleware };
