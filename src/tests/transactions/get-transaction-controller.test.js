@@ -90,7 +90,7 @@ describe('GET /v1/transactions/:id', () => {
 
         expect(res.status).toBe(404);
         expect(res.body).toHaveProperty('status', 'error');
-        expect(res.body).toHaveProperty('message', 'Transaction not found.');
+        expect(res.body).toHaveProperty('message', 'Transaction could not found.');
     });
 
     it('should return 403 when the transaction belongs to a different user', async () => {
