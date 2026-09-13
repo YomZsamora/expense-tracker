@@ -1,6 +1,7 @@
 'use strict';
 
 const { handleBadRequests } = require('../../utils/exceptions/exception-handler');
+const { TransactionFilterService, TRANSACTION_FILTER_CONFIG } = require('../../utils/filters/transaction-filter-service');
 const {
     amountFieldValidator,
     typeFieldValidator,
@@ -14,6 +15,7 @@ const {
     categoryIdFieldOptionalValidator,
     dateFieldOptionalValidator,
     resolveCategoryForTransactionUpdate,
+    listTransactionsQueryValidator
 } = require('../../utils/validators/transaction-validators');
 
 /** * Creates a new transaction.
@@ -57,4 +59,22 @@ const deleteTransactionMiddleware = [
     resolveTransactionMiddleware,
 ];
 
-module.exports = { createTransactionMiddleware, getTransactionMiddleware, updateTransactionMiddleware, deleteTransactionMiddleware };
+const listTransactionsMiddleware = [
+    ...listTransactionsQueryValidator,
+    handleBadRequests('Error occurred while retrieving transactions.'),
+    (req, res, next) => {
+        const filterService = new TransactionFilterService(TRANSACTION_FILTER_CONFIG);
+        const { where, filters } = filterService.processFilters(req.query);
+        req.where = where;
+        req.filters = filters;
+        next();
+    },
+];
+
+module.exports = { 
+    createTransactionMiddleware, 
+    getTransactionMiddleware, 
+    updateTransactionMiddleware, 
+    deleteTransactionMiddleware, 
+    listTransactionsMiddleware 
+};
