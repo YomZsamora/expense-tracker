@@ -6,6 +6,7 @@ const {
     amountFieldValidator,
     monthFieldValidator,
     yearFieldValidator,
+    listBudgetsQueryValidator,
     resolveCategoryForBudget,
     budgetUniqueValidator,
     resolveBudgetMiddleware,
@@ -27,8 +28,13 @@ const updateBudgetMiddleware = [
     resolveBudgetMiddleware,
 ];
 
+const listBudgetsMiddleware = [
+    ...listBudgetsQueryValidator,
+    handleBadRequests('Error occurred while retrieving budgets.'),
+];
+
 const deleteBudgetMiddleware = [
     resolveBudgetMiddleware,
 ];
 
-module.exports = { createBudgetMiddleware, updateBudgetMiddleware, deleteBudgetMiddleware };
+module.exports = { createBudgetMiddleware, listBudgetsMiddleware, updateBudgetMiddleware, deleteBudgetMiddleware };
