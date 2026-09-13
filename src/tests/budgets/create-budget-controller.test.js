@@ -193,7 +193,7 @@ describe('POST /v1/budgets', () => {
         expect(res.status).toBe(400);
         expect(res.body).toHaveProperty('status', 'error');
         expect(res.body).toHaveProperty('message', 'Validation failed.');
-        expect(res.body.data).toHaveProperty('categoryId', 'Category could ˝˝˝not found.');
+        expect(res.body.data).toHaveProperty('categoryId', 'Category could not found.');
     });
 
     it('should return 400 when categoryId belongs to a different user', async () => {
