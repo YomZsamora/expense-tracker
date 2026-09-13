@@ -52,7 +52,7 @@ const resolveCategoryForTransaction = async (req, res, next) => {
 const resolveTransactionMiddleware = async (req, res, next) => {
     try {
         const transaction = await transactionRepository.findTransactionById(req.params.id);
-        if (!transaction) return next(new NotFound('Transaction not found.'));
+        if (!transaction) return next(new NotFound('Transaction could not found.'));
         if (transaction.userId !== req.user.sub) return next(new PermissionDenied());
         req.transaction = transaction;
         next();
