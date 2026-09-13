@@ -14,4 +14,10 @@ const monthlySummaryQueryValidator = [
         .isInt({ min: 2000 }).withMessage('Year must be 2000 or later.'),
 ];
 
-module.exports = { monthlySummaryQueryValidator };
+const trendsQueryValidator = [
+    query('months')
+        .optional()
+        .isInt({ min: 1, max: 12 }).withMessage('Months must be an integer between 1 and 12.'),
+];
+
+module.exports = { monthlySummaryQueryValidator, trendsQueryValidator };
