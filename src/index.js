@@ -9,6 +9,7 @@ const authRoutes = require('./app/routes/auth-routes');
 const userRoutes = require('./app/routes/user-routes');
 const categoryRoutes = require('./app/routes/category-routes');
 const transactionRoutes = require('./app/routes/transaction-routes');
+const budgetRoutes = require('./app/routes/budget-routes');
 const { exceptionHandler } = require('./utils/exceptions/exception-handler');
 const { isUserAuthenticated } = require('./app/middlewares/authorization-middlewares');
 
@@ -34,6 +35,7 @@ app.use(isUserAuthenticated);
 app.use('/v1/users/', userRoutes);
 app.use('/v1/categories/', categoryRoutes);
 app.use('/v1/transactions/', transactionRoutes);
+app.use('/v1/budgets/', budgetRoutes);
 
 // Exception handler
 app.use(exceptionHandler);
