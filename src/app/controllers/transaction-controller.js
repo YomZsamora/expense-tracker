@@ -3,6 +3,9 @@
 const { ApiResponse } = require('../../utils/responses');
 const transactionRepository = require('../../repositories/transaction-repository');
 const transactionSerializer = require('../../utils/serializers/transaction-serializer');
+const { DefaultPaginator } = require('../../utils/paginators');
+const { TransactionSortingService } = require('../../utils/sorting/transaction-sorting-service');
+const config = require('../../configs/config');
 
 /** * Creates a new transaction.
  * @param {Object} req - The request object.
@@ -77,4 +80,35 @@ const deleteTransactionController = async (req, res, next) => {
     }
 };
 
-module.exports = { createTransactionController, getTransactionController, updateTransactionController, deleteTransactionController };
+const listTransactionsController = async (req, res, next) => {
+    try {
+        const { page, limit, offset } = DefaultPaginator.getPaginationParams(req.query, config.app);
+        const { sortBy, sortOrder } = TransactionSortingService.getSortingParams(req.query);
+        const { transactions, total } = await transactionRepository.findUserTransactions(req.user.sub, {
+            where: req.where,
+            limit,
+            offset,
+            sortBy,
+            sortOrder,
+        });
+        const apiResponse = new ApiResponse();
+        apiResponse.message = 'Transactions retrieved successfully.';
+        apiResponse.data = {
+            transactions: transactionSerializer.serializeTransactionList(transactions),
+            pagination: DefaultPaginator.getPaginationMetadata(total, page, limit),
+            sorting: { sortBy, sortOrder },
+            filters: req.filters,
+        };
+        return res.status(200).json(apiResponse);
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { 
+    createTransactionController, 
+    getTransactionController, 
+    updateTransactionController, 
+    deleteTransactionController, 
+    listTransactionsController 
+};
