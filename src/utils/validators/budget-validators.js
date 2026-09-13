@@ -1,6 +1,6 @@
 'use strict';
 
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 const { BadRequest, NotFound, PermissionDenied, Conflict } = require('../exceptions/custom-exceptions');
 const categoryRepository = require('../../repositories/category-repository');
 const budgetRepository = require('../../repositories/budget-repository');
@@ -33,6 +33,22 @@ const yearFieldValidator = body('year')
         }
         return true;
     });
+
+const listBudgetsQueryValidator = [
+    query('month')
+        .optional()
+        .isInt({ min: 1, max: 12 }).withMessage('Month must be an integer between 1 and 12.'),
+    query('year')
+        .optional()
+        .isInt({ min: 2000 }).withMessage('Year must be 2000 or later.')
+        .custom((value) => {
+            const maxYear = new Date().getFullYear() + 1;
+            if (parseInt(value, 10) > maxYear) {
+                throw new Error(`Year cannot be later than ${maxYear}.`);
+            }
+            return true;
+        }),
+];
 
 const resolveCategoryForBudget = async (req, res, next) => {
     try {
@@ -81,6 +97,7 @@ module.exports = {
     amountFieldValidator,
     monthFieldValidator,
     yearFieldValidator,
+    listBudgetsQueryValidator,
     resolveCategoryForBudget,
     budgetUniqueValidator,
     resolveBudgetMiddleware,
