@@ -68,4 +68,13 @@ const updateTransactionController = async (req, res, next) => {
     }
 };
 
-module.exports = { createTransactionController, getTransactionController, updateTransactionController };
+const deleteTransactionController = async (req, res, next) => {
+    try {
+        await transactionRepository.deleteTransaction(req.transaction.id);
+        return res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { createTransactionController, getTransactionController, updateTransactionController, deleteTransactionController };
