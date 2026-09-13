@@ -8,6 +8,7 @@ const {
     yearFieldValidator,
     resolveCategoryForBudget,
     budgetUniqueValidator,
+    resolveBudgetMiddleware,
 } = require('../../utils/validators/budget-validators');
 
 const createBudgetMiddleware = [
@@ -20,4 +21,10 @@ const createBudgetMiddleware = [
     budgetUniqueValidator,
 ];
 
-module.exports = { createBudgetMiddleware };
+const updateBudgetMiddleware = [
+    amountFieldValidator,
+    handleBadRequests('Error occurred while updating budget.'),
+    resolveBudgetMiddleware,
+];
+
+module.exports = { createBudgetMiddleware, updateBudgetMiddleware };
