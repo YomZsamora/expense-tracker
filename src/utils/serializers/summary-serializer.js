@@ -50,4 +50,23 @@ const serializeMonthlySummary = ({ categoryRows, budgets, month, year }) => {
     };
 };
 
-module.exports = { serializeMonthlySummary };
+const serializeMonthlyTrends = ({ periods, rows, months }) => {
+    const trends = periods.map(({ month, year }) => {
+        const incomeRow = rows.find((r) => r.month === month && r.year === year && r.type === 'income');
+        const expenseRow = rows.find((r) => r.month === month && r.year === year && r.type === 'expense');
+        const income = parseFloat(parseFloat(incomeRow ? incomeRow.total : 0).toFixed(2));
+        const expenses = parseFloat(parseFloat(expenseRow ? expenseRow.total : 0).toFixed(2));
+        return {
+            period: { month, year },
+            totals: {
+                income,
+                expenses,
+                net: parseFloat((income - expenses).toFixed(2)),
+            },
+        };
+    });
+
+    return { months, trends };
+};
+
+module.exports = { serializeMonthlySummary, serializeMonthlyTrends };
