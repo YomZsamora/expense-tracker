@@ -27,4 +27,8 @@ const updateBudgetMiddleware = [
     resolveBudgetMiddleware,
 ];
 
-module.exports = { createBudgetMiddleware, updateBudgetMiddleware };
+const deleteBudgetMiddleware = [
+    resolveBudgetMiddleware,
+];
+
+module.exports = { createBudgetMiddleware, updateBudgetMiddleware, deleteBudgetMiddleware };
