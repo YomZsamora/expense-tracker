@@ -24,4 +24,18 @@ const createBudgetController = async (req, res, next) => {
     }
 };
 
-module.exports = { createBudgetController };
+const updateBudgetController = async (req, res, next) => {
+    try {
+        const { amount } = req.body;
+        await budgetRepository.updateBudget(req.budget.id, amount);
+        const updated = await budgetRepository.findBudgetById(req.budget.id);
+        const apiResponse = new ApiResponse();
+        apiResponse.message = 'Budget updated successfully.';
+        apiResponse.data = budgetSerializer.serializeBudget(updated);
+        return res.status(200).json(apiResponse);
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { createBudgetController, updateBudgetController };
