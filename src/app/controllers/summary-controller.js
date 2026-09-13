@@ -4,10 +4,6 @@ const { ApiResponse } = require('../../utils/responses');
 const summaryRepository = require('../../repositories/summary-repository');
 const summarySerializer = require('../../utils/serializers/summary-serializer');
 
-/** * Controller for retrieving the monthly summary.
- * It fetches the summary data from the repository, serializes it, and sends it in the response.
- * If an error occurs, it passes the error to the next middleware for handling.
- */
 const getMonthlySummaryController = async (req, res, next) => {
     try {
         const now = new Date();
@@ -23,4 +19,17 @@ const getMonthlySummaryController = async (req, res, next) => {
     }
 };
 
-module.exports = { getMonthlySummaryController };
+const getMonthlyTrendsController = async (req, res, next) => {
+    try {
+        const months = req.query.months ? parseInt(req.query.months, 10) : 6;
+        const { periods, rows } = await summaryRepository.getMonthlyTrends(req.user.sub, months);
+        const apiResponse = new ApiResponse();
+        apiResponse.message = 'Monthly trends retrieved successfully.';
+        apiResponse.data = summarySerializer.serializeMonthlyTrends({ periods, rows, months });
+        return res.status(200).json(apiResponse);
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { getMonthlySummaryController, getMonthlyTrendsController };
