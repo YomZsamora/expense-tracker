@@ -110,6 +110,15 @@ describe('DELETE /v1/transactions/:id', () => {
         expect(res.body).toHaveProperty('message', "You don't have required permission to perform this action.");
     });
 
+    it('should allow transaction owner to successfully delete transactions', async () => {
+        const res = await request(app)
+            .delete(`/v1/transactions/${transaction.id}`)
+            .set('Authorization', `Bearer ${accessToken}`)
+            .send(transactionPayload);
+
+        expect(res.status).toBe(204);
+    });
+
     it('should call next() with an error if any exception is thrown', async () => {
         req = {};
         res = {
