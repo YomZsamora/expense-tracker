@@ -27,5 +27,7 @@ module.exports = {
         JWT_ACCESS_TOKEN_TTL: process.env.JWT_ACCESS_TOKEN_TTL,
         JWT_REFRESH_TOKEN_TTL: process.env.JWT_REFRESH_TOKEN_TTL,
         BCRYPT_ROUNDS: process.env.BCRYPT_ROUNDS,
+        DEFAULT_PAGE: parseInt(process.env.DEFAULT_PAGE, 1) || 1,
+        DEFAULT_PAGE_SIZE: parseInt(process.env.DEFAULT_PAGE_SIZE, 10) || 10,
     },
 };
