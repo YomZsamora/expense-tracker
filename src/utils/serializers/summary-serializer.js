@@ -69,4 +69,35 @@ const serializeMonthlyTrends = ({ periods, rows, months }) => {
     return { months, trends };
 };
 
-module.exports = { serializeMonthlySummary, serializeMonthlyTrends };
+const serializeCategoryBreakdown = ({ rows, startDate, endDate }) => {
+    let totalIncome = 0;
+    let totalExpenses = 0;
+
+    const categories = rows.map((row) => {
+        const total = parseFloat(row.total) || 0;
+        const count = parseInt(row.count, 10) || 0;
+
+        if (row.categoryType === 'income') totalIncome += total;
+        else totalExpenses += total;
+
+        return {
+            categoryId: row.categoryId,
+            name: row.categoryName,
+            type: row.categoryType,
+            total,
+            count,
+        };
+    });
+
+    return {
+        period: { startDate, endDate },
+        totals: {
+            income: parseFloat(totalIncome.toFixed(2)),
+            expenses: parseFloat(totalExpenses.toFixed(2)),
+            net: parseFloat((totalIncome - totalExpenses).toFixed(2)),
+        },
+        categories,
+    };
+};
+
+module.exports = { serializeMonthlySummary, serializeMonthlyTrends, serializeCategoryBreakdown };
