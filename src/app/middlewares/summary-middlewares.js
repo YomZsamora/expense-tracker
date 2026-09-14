@@ -1,7 +1,7 @@
 'use strict';
 
 const { handleBadRequests } = require('../../utils/exceptions/exception-handler');
-const { monthlySummaryQueryValidator, trendsQueryValidator } = require('../../utils/validators/summary-validators');
+const { monthlySummaryQueryValidator, trendsQueryValidator, categoryBreakdownQueryValidator } = require('../../utils/validators/summary-validators');
 
 const monthlySummaryMiddleware = [
     ...monthlySummaryQueryValidator,
@@ -13,4 +13,9 @@ const trendsMiddleware = [
     handleBadRequests('Error occurred while retrieving monthly trends.'),
 ];
 
-module.exports = { monthlySummaryMiddleware, trendsMiddleware };
+const categoryBreakdownMiddleware = [
+    ...categoryBreakdownQueryValidator,
+    handleBadRequests('Error occurred while retrieving category breakdown.'),
+];
+
+module.exports = { monthlySummaryMiddleware, trendsMiddleware, categoryBreakdownMiddleware };
