@@ -2,9 +2,6 @@
 
 const { query } = require('express-validator');
 
-/** * Validator for the monthly summary query parameters.
- * Ensures that 'month' is an integer between 1 and 12, and 'year' is an integer of 2000 or later.
- */
 const monthlySummaryQueryValidator = [
     query('month')
         .optional()
@@ -20,4 +17,26 @@ const trendsQueryValidator = [
         .isInt({ min: 1, max: 12 }).withMessage('Months must be an integer between 1 and 12.'),
 ];
 
-module.exports = { monthlySummaryQueryValidator, trendsQueryValidator };
+const categoryBreakdownQueryValidator = [
+    query('startDate')
+        .notEmpty().withMessage('Start date is required.')
+        .isISO8601().withMessage('Start date must be a valid date (YYYY-MM-DD).'),
+    query('endDate')
+        .notEmpty().withMessage('End date is required.')
+        .isISO8601().withMessage('End date must be a valid date (YYYY-MM-DD).')
+        .custom((endDate, { req }) => {
+            const startDate = req.query.startDate;
+            if (!startDate) return true;
+            if (new Date(endDate) <= new Date(startDate)) {
+                throw new Error('End date must be after start date.');
+            }
+            const diffMs = new Date(endDate) - new Date(startDate);
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+            if (diffDays > 365) {
+                throw new Error('Date range cannot exceed 1 year.');
+            }
+            return true;
+        }),
+];
+
+module.exports = { monthlySummaryQueryValidator, trendsQueryValidator, categoryBreakdownQueryValidator };
