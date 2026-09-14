@@ -75,4 +75,27 @@ const getMonthlySummary = async (userId, month, year) => {
     return { categoryRows, budgets };
 };
 
-module.exports = { getMonthlyTrends, getMonthlySummary };
+const getCategoryBreakdown = async (userId, startDate, endDate) => {
+    const rows = await sequelize.query(`
+        SELECT
+            t."categoryId",
+            c.name        AS "categoryName",
+            c.type        AS "categoryType",
+            SUM(t.amount) AS "total",
+            COUNT(t.id)   AS "count"
+        FROM transactions t
+        JOIN categories c ON t."categoryId" = c.id
+        WHERE t."userId"    = :userId
+          AND t.date        BETWEEN :startDate AND :endDate
+          AND t."deletedAt" IS NULL
+        GROUP BY t."categoryId", c.name, c.type
+        ORDER BY c.type, c.name
+    `, {
+        replacements: { userId, startDate, endDate },
+        type: QueryTypes.SELECT,
+    });
+
+    return rows;
+};
+
+module.exports = { getMonthlyTrends, getMonthlySummary, getCategoryBreakdown };
