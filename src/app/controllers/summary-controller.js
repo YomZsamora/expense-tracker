@@ -32,4 +32,17 @@ const getMonthlyTrendsController = async (req, res, next) => {
     }
 };
 
-module.exports = { getMonthlySummaryController, getMonthlyTrendsController };
+const getCategoryBreakdownController = async (req, res, next) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const rows = await summaryRepository.getCategoryBreakdown(req.user.sub, startDate, endDate);
+        const apiResponse = new ApiResponse();
+        apiResponse.message = 'Category breakdown retrieved successfully.';
+        apiResponse.data = summarySerializer.serializeCategoryBreakdown({ rows, startDate, endDate });
+        return res.status(200).json(apiResponse);
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { getMonthlySummaryController, getMonthlyTrendsController, getCategoryBreakdownController };
