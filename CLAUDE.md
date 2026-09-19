@@ -312,39 +312,47 @@ Only use this pattern when a class + `handle()` would force unrelated operations
 
 `src/models/<model>.js` defines the model directly with `sequelize.define(...)` — **not** the `module.exports = (sequelize, DataTypes) => {...}` factory pattern.
 
+### Model Field Format
+
+Use the **compact inline format**: each field on one line, all properties on that same line, with
+colons aligned for readability. This is the enforced convention — do not expand simple fields into
+multi-line blocks.
+
+```js
+// correct — compact inline
+id:           { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+code:         { type: DataTypes.STRING(20), allowNull: false, unique: true },
+expiresAt:    { type: DataTypes.DATE, allowNull: true },
+```
+
+```js
+// wrong — unnecessarily expanded
+id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+},
+```
+
+Use the expanded multi-line format **only** when a field definition is genuinely complex — for
+example, a deeply nested `validate` block or a long composite `references` object — where the
+inline version would exceed a readable line length. This is a judgment call enforced at code
+review; there is no automated lint rule for it.
+
 ```js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../configs/sequelize');
 
 const Category = sequelize.define('Category', {
-    id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-    },
-    userId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-    },
-    name: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-    },
-    type: {
-        type: DataTypes.ENUM('income', 'expense'),
-        allowNull: false,
-    },
-    isDefault: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-    },
+    id:        { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true, },
+    userId:    { type: DataTypes.UUID, allowNull: false, },
+    name:      { type: DataTypes.STRING(100), allowNull: false, },
+    type:      { type: DataTypes.ENUM('income', 'expense'), allowNull: false, },
+    isDefault: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, },
 }, {
     tableName: 'categories',
     paranoid: true,
-    indexes: [
-        { name: 'idx_categories_userId', fields: ['userId'] },
-    ],
+    indexes: [ { name: 'idx_categories_userId', fields: ['userId'] }, ],
 });
 
 module.exports = { Category };
